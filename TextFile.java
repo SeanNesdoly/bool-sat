@@ -3,7 +3,7 @@
  * within this class are static, and thus it should not be instantiated as an
  * object.
  *
- * Specifically, this class is tailored to reading formulae from propositional
+ * TODO: ?Specifically, this class is tailored to reading formulae from propositional
  * logic; these are then be converted into CNF. A further adaptation exists to
  * read in a set of edges from a graph for use in the Three-colouring problem.
  *
@@ -12,9 +12,13 @@
  * February 11th, 2017
  */
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.Scanner;
+ import java.util.Scanner;
+ import java.io.IOException;
+ import java.io.FileWriter;
+ import java.io.PrintWriter;
+ import java.io.File;
+ import java.io.FilenameFilter;
+ import java.util.ArrayList;
 
 public class TextFile {
 
