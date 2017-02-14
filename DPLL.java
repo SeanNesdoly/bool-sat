@@ -1,7 +1,3 @@
-import java.io.*;
-import java.util.ArrayList;
-import java.util.Scanner;
-
 /*
  * An implementation of the DPLL Algorithm for deciding the satisfiability of
  * propositional logic formulae in conjuctive normal form.
@@ -11,64 +7,64 @@ import java.util.Scanner;
  * February 11th, 2017
  */
 
+import java.util.ArrayList;
+import java.io.IOException;
+
 public class DPLL {
 
-    private static final String IN = "in2.txt";
-    private static final String OUT = "out2.txt";
+    private static final String SATISFIABLE = "The conclusion follows logically from the premises.\n";
+    private static final String NOT_SATISFIABLE = "The conclusion does not follow logically from the premises.\n";
 
     public static void main(String[] args) {
 
+        ArrayList<String> cnf_string_formula = null;
         try {
-            System.out.println(readFile());
-            writeFile(false);
+            cnf_string_formula = TextFile.readFile();
+            TextFile.writeFile(NOT_SATISFIABLE);
         } catch (IOException ex) {
             System.err.println(ex.getMessage());
+            return;
+        }
+
+        //parseCNF(cnf_string_formula);
+    }
+
+    public static char[][] parseCNF(String cnf_string_formula) {
+        // convert to all uppercase & trim off leading & ending braces
+        cnf_string_formula = cnf_string_formula.toUpperCase().substring(1,cnf_string_formula.length()-1);
+
+        //String delim = "(\\)\\W\\()";
+        String delim = ",";
+        String[] clauses = cnf_string_formula.split(delim);
+
+        char[][] cnf_formula = new char[clauses.length][];
+
+        for (int i = 0; i < clauses.length; i++) {
+            System.out.println(clauses[i]);
+            String[] literals = clauses[i].split(",");
+            cnf_formula[i] = new char[literals.length];
+
+            for (int j = 0; j < literals.length; j++) {
+                if (literals[j].length() > 1) {
+                    // case: false literal !A --> convert to LOWERCASE
+                    //cnf_formula[i][j] = literals[j].toLowerCase().charAt(1);
+                } else {
+                    // case: true literal A --> keep UPPERCASE
+                    //cnf_formula[i][j] = literals[j].charAt(0);
+                }
+            }
+        }
+
+        return cnf_formula;
+    }
+
+    private class Symbol {
+        public char _s;
+        public boolean _value;
+
+        Symbol(char s, boolean value) {
+            _s = s;
+            _value = value;
         }
     }
-
-   /**
-    * Reads from the file with the name defined by the constant IN. The file must
-    * contain a set of premises and a conclusion, each seperated by a new-line character.
-    * The set of premises and the conclusion are returned as an ArrayList of strings.
-    *
-    * @return an array of premises and a conclusion
-    */
-    public static String readFile() throws IOException {
-        Scanner sf = new Scanner(new File(IN));
-
-        // for testing purposes only; will replace
-        String premises = sf.nextLine();
-
-        /* TODO: code below runs on non-CNF input; will eventually replace the code above!
-        ArrayList<String> premises = new ArrayList<String>();
-        while (sf.hasNext()) {
-            premises.add(sf.nextLine());
-        }*/
-
-        // clean up
-        sf.close();
-
-        return premises;
-    }
-
-   /**
-    * Writes to a file named by the constant OUT. The file will contain a single
-    * line that denotes whether or not the conlusion logically followed from the
-    * premises (where the conclusion and premises were obtained from the IN file).
-    */
-    public static void writeFile(boolean conclusion) throws IOException {
-        FileWriter fw = new FileWriter(OUT);
-        PrintWriter output = new PrintWriter(fw);
-
-        if (conclusion)
-            output.print("The conclusion follows logically from the premises.\n");
-        else
-            output.print("The conclusion does not follow logically from the premises.\n");
-
-        // clean up
-        output.close();
-        fw.close();
-        return;
-    }
-
  }
