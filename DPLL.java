@@ -9,6 +9,7 @@
 
 import java.util.ArrayList;
 import java.util.Set;
+import java.util.HashSet;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.Iterator;
@@ -144,6 +145,10 @@ public class DPLL {
         public Literal createNegatedLiteral() {
             return new Literal(this.s, this.l > 0 ? false:true);
         }
+
+        public String toString() {
+            return (this.l > 0 ? "":"!") + s;
+        }
     }
 
 
@@ -153,34 +158,84 @@ public class DPLL {
 
         LinkedList<Literal> literals;
 
-        public Clause(String clauseStr) {
-            // TODO: parse literals from clause string
+        public Clause(String[] literals) {
+            this.literals = new LinkedList<Literal>();
+            for (String l : literals) {
+                this.literals.add(new Literal(l));
+            }
+        }
+
+        public Clause(char l) {
+            literals = new LinkedList<Literal>();
+            Literal unitClause = new Literal("" + l);
+            literals.add(unitClause);
         }
 
         public Clause(LinkedList<Literal> _literals) {
             literals = _literals;
         }
 
-        public Clause(Literal unitClause) {
-            literals = new LinkedList<Literal>();
-            literals.add(unitClause);
-        }
-
         // determines if this clause is a unit clause (only 1 literal)
         public boolean isUnitClause() {
             return literals.size() == 1;
         }
+
+        public String toString() {
+            if (this.isUnitClause())
+                return literals.get(0).toString();
+
+            String out = "(";
+            for (Literal l : literals) {
+                out += l.toString() + ",";
+            }
+
+            return out.substring(0, out.length()-1) + ")";
+        }
     }
 
     // Wrapper class for a propositional logic formula in CNF
-    private class CNF {
+    public class CNF {
         Set<Literal> literals;
-        Set<Clause> clauses;
-        String cnf; // CNF formula in clausal form
+        LinkedList<Clause> clauses;
+        String formula; // CNF formula in clausal form
 
         public CNF(String _cnf) {
-            cnf = _cnf;
+            clauses = new LinkedList<Clause>(); //HashSet<Clause>();
+            formula = _cnf;
+
             // TODO: parse CNF string into Clauses & Literals
+
+            formula = formula.substring(1, formula.length() - 1); // trim off curly braces
+
+            int index = 0;
+            while (index < formula.length()) {
+                if (formula.charAt(index) == '(') {
+                    int endBracket = formula.indexOf(')', index);
+                    String[] literals = formula.substring(index+1, endBracket).split(",");
+
+                    clauses.add(new Clause(literals));
+
+                    // update current index in CNF clausal form sentence
+                    index = endBracket + 1;
+                } else if (formula.charAt(index) == ',') {
+                    index++;
+                } else { // unit clause (a single literal without brackets)
+                    clauses.add(new Clause(formula.charAt(index)));
+                    index++;
+                }
+            }
+        }
+
+        public String toString() {
+            String out = "{";
+            for (Clause c : clauses) {
+                if (c.isUnitClause())
+                    out += c.toString() + ",";
+                else
+                    out += c.toString() + ",";
+            }
+
+            return out.substring(0, out.length()-1) + "}";
         }
     }
 
@@ -190,6 +245,14 @@ public class DPLL {
         try {
             formulas = TextFile.readFile();
             //System.out.println(formulas.get(0));
+
+            // TODO: parse formulas into CNF in clausal form from Mary
+
+            CNF cnf = new DPLL().new CNF(formulas.get(0));
+            System.out.println(cnf.formula);
+            System.out.println(cnf.toString());
+
+
             TextFile.writeFile(SAT);
         } catch (IOException ex) {
             System.err.println(ex.getMessage());
