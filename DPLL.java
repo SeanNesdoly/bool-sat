@@ -28,21 +28,6 @@ public class DPLL {
 
 
 
-    // find the first instance of a unit clause in the formula; note that a unit clause
-    // is simply a clause that contains only one literal
-    private static Clause find_unit_clause(CNF formula) {
-        for(Iterator<Clause> i = formula.clauses.iterator(); i.hasNext();) {
-            Clause c = i.next();
-
-            if (c.isUnitClause())
-                return c;
-        }
-
-        return null;
-    }
-
-
-
     // look for all non-unit clauses that contain the unit clause l and remove them,
     // as there exists an assignment of the unit clause that makes all clauses with that literal
     // true; additionally, remove from all clauses any instance of the negated unit clause
@@ -52,14 +37,13 @@ public class DPLL {
         for(Iterator<Clause> i = formula.clauses.iterator(); i.hasNext();) {
             Clause c = i.next();
 
-            // remove all non-unit clauses that contain the unit clause l
-            if (!c.isUnitClause() && c.literals.indexOf(l) != -1) {
-                System.out.println("removed");
+            // remove all non-unit clauses containing the literal l
+            if (!c.isUnitClause() && c.literals.contains(l)) {
                 i.remove();
                 continue;
             }
 
-            // remove all instances of the negated unit clause for each clause in the formula
+            // in every clause that contains the negated literal !l, delete it
             while (c.literals.indexOf(negated_l) != -1) {
                 // we are not modifying the actual iterator here so it is a safe operation!
                 c.literals.remove(negated_l);
@@ -108,7 +92,7 @@ public class DPLL {
     private class Literal {
         char s; // symbol of literal
         int l; // +l = a positive literal; -l = a negative literal
-        boolean val; // the value assigned to this literal
+        boolean val; // the value actually assigned to the symbol (!A where A has value true is false)
         boolean isAssigned; // flag for this literal being assigned in the DPLL algorithm
 
         // Parse out a Literal from a String!
@@ -126,6 +110,7 @@ public class DPLL {
             isAssigned = false;
         }
 
+        // creates a literal with the given symbol and sign (sign=false=!A)
         public Literal(char symbol, boolean sign) {
             s = symbol;
             if (sign)
@@ -134,6 +119,27 @@ public class DPLL {
                 l = -symbol; // negative literal
 
             isAssigned = false; // maybe not?
+        }
+
+        @Override public boolean equals(Object other) {
+            if (this == other) return true;
+
+            if (!(other instanceof Literal)) return false;
+
+            Literal otherLit = (Literal)other;
+
+            // TODO: may require comparison of val/isAssigned
+            return (s == otherLit.s && l == otherLit.l);
+        }
+
+        @Override public int hashCode() {
+            int result = 7; // prime number
+
+            // compute hash value
+            result = 37*result + (int)s;
+            result = 37*result + l;
+
+            return result;
         }
 
         // compute the value of the literal with consideration of its sign
@@ -149,6 +155,7 @@ public class DPLL {
             l = -l;
         }
 
+        // creates an instance of this literal that is negated
         public Literal createNegatedLiteral() {
             return new Literal(this.s, this.l > 0 ? false:true);
         }
@@ -250,6 +257,19 @@ public class DPLL {
             }
         }
 
+        // find the first instance of a unit clause in the formula; note that a unit clause
+        // is simply a clause that contains only one literal (!A or A)
+        public Clause find_unit_clause() {
+            for(Iterator<Clause> i = this.clauses.iterator(); i.hasNext();) {
+                Clause c = i.next();
+
+                if (c.isUnitClause())
+                    return c;
+            }
+
+            return null;
+        }
+
         // convenience method to print out a CNF formula in clausal form
         public String toString() {
             String out = "{";
@@ -276,11 +296,17 @@ public class DPLL {
             System.out.println(cnf.formula);
             System.out.println(cnf);
 
-            Clause c = find_unit_clause(cnf);
+            Clause c = cnf.find_unit_clause();
             System.out.println(c);
 
             cnf = unit_propogate(c.toLiteral(), cnf);
             System.out.println(cnf);
+
+            c = cnf.find_unit_clause();
+
+            cnf = unit_propogate(c.toLiteral(), cnf);
+            System.out.println(cnf);
+
 
             TextFile.writeFile(SAT);
         } catch (IOException ex) {
