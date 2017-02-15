@@ -26,9 +26,11 @@ public class DPLL {
         return false;
     }
 
+
+
     // find the first instance of a unit clause in the formula; note that a unit clause
     // is simply a clause that contains only one literal
-    private Clause find_unit_clause(CNF formula) {
+    private static Clause find_unit_clause(CNF formula) {
         for(Iterator<Clause> i = formula.clauses.iterator(); i.hasNext();) {
             Clause c = i.next();
 
@@ -39,10 +41,12 @@ public class DPLL {
         return null;
     }
 
+
+
     // look for all non-unit clauses that contain the unit clause l and remove them,
     // as there exists an assignment of the unit clause that makes all clauses with that literal
     // true; additionally, remove from all clauses any instance of the negated unit clause
-    private CNF unit_propogate(Literal l, CNF formula) {
+    private static CNF unit_propogate(Literal l, CNF formula) {
         Literal negated_l = l.createNegatedLiteral();
 
         for(Iterator<Clause> i = formula.clauses.iterator(); i.hasNext();) {
@@ -50,6 +54,7 @@ public class DPLL {
 
             // remove all non-unit clauses that contain the unit clause l
             if (!c.isUnitClause() && c.literals.indexOf(l) != -1) {
+                System.out.println("removed");
                 i.remove();
                 continue;
             }
@@ -63,6 +68,8 @@ public class DPLL {
 
         return formula;
     }
+
+
 
     // TODO: has been replaced by unit_propogate.. will remove
     private void propogate_units(CNF formula) {
@@ -104,16 +111,6 @@ public class DPLL {
         boolean val; // the value assigned to this literal
         boolean isAssigned; // flag for this literal being assigned in the DPLL algorithm
 
-        public Literal(char symbol, boolean sign) {
-            s = symbol;
-            if (sign)
-                l = (int)symbol; // positive literal
-            else
-                l = -symbol; // negative literal
-
-            isAssigned = false; // maybe not?
-        }
-
         // Parse out a Literal from a String!
         public Literal(String litStr) {
             if (litStr.length() == 0)
@@ -127,6 +124,16 @@ public class DPLL {
             }
 
             isAssigned = false;
+        }
+
+        public Literal(char symbol, boolean sign) {
+            s = symbol;
+            if (sign)
+                l = (int)symbol; // positive literal
+            else
+                l = -symbol; // negative literal
+
+            isAssigned = false; // maybe not?
         }
 
         // compute the value of the literal with consideration of its sign
@@ -146,6 +153,7 @@ public class DPLL {
             return new Literal(this.s, this.l > 0 ? false:true);
         }
 
+        // convenience method to print out a literal
         public String toString() {
             return (this.l > 0 ? "":"!") + s;
         }
@@ -153,7 +161,8 @@ public class DPLL {
 
 
 
-    // Wrapper class for the disjunction of a set of Literals
+    // Wrapper class for the disjunction of a set of Literals; the only exception
+    // is a unit clause, which is only 1 literal!
     private class Clause {
 
         LinkedList<Literal> literals;
@@ -165,14 +174,10 @@ public class DPLL {
             }
         }
 
-        public Clause(char l) {
+        public Clause(String l) {
             literals = new LinkedList<Literal>();
-            Literal unitClause = new Literal("" + l);
+            Literal unitClause = new Literal(l);
             literals.add(unitClause);
-        }
-
-        public Clause(LinkedList<Literal> _literals) {
-            literals = _literals;
         }
 
         // determines if this clause is a unit clause (only 1 literal)
@@ -180,9 +185,19 @@ public class DPLL {
             return literals.size() == 1;
         }
 
+        // converts a unit clause to a single literal
+        public Literal toLiteral() {
+            if (this.isUnitClause()) {
+                return literals.get(0);
+            }
+
+            return null;
+        }
+
+        // convenience method to print out a clause in clausal form
         public String toString() {
             if (this.isUnitClause())
-                return literals.get(0).toString();
+                return this.toLiteral().toString();
 
             String out = "(";
             for (Literal l : literals) {
@@ -193,6 +208,8 @@ public class DPLL {
         }
     }
 
+
+
     // Wrapper class for a propositional logic formula in CNF
     public class CNF {
         Set<Literal> literals;
@@ -200,7 +217,7 @@ public class DPLL {
         String formula; // CNF formula in clausal form
 
         public CNF(String _cnf) {
-            clauses = new LinkedList<Clause>(); //HashSet<Clause>();
+            clauses = new LinkedList<Clause>();
             formula = _cnf;
 
             // TODO: parse CNF string into Clauses & Literals
@@ -220,24 +237,31 @@ public class DPLL {
                 } else if (formula.charAt(index) == ',') {
                     index++;
                 } else { // unit clause (a single literal without brackets)
-                    clauses.add(new Clause(formula.charAt(index)));
-                    index++;
+                    if (formula.charAt(index) == '!') {
+                        // parse !A
+                        clauses.add(new Clause(formula.substring(index, index+2)));
+                        index += 2;
+                    } else {
+                        // parse A
+                        clauses.add(new Clause("" + formula.charAt(index)));
+                        index++;
+                    }
                 }
             }
         }
 
+        // convenience method to print out a CNF formula in clausal form
         public String toString() {
             String out = "{";
             for (Clause c : clauses) {
-                if (c.isUnitClause())
-                    out += c.toString() + ",";
-                else
-                    out += c.toString() + ",";
+                out += c.toString() + ",";
             }
 
             return out.substring(0, out.length()-1) + "}";
         }
     }
+
+
 
     public static void main(String[] args) {
 
@@ -250,8 +274,13 @@ public class DPLL {
 
             CNF cnf = new DPLL().new CNF(formulas.get(0));
             System.out.println(cnf.formula);
-            System.out.println(cnf.toString());
+            System.out.println(cnf);
 
+            Clause c = find_unit_clause(cnf);
+            System.out.println(c);
+
+            cnf = unit_propogate(c.toLiteral(), cnf);
+            System.out.println(cnf);
 
             TextFile.writeFile(SAT);
         } catch (IOException ex) {
