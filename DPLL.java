@@ -7,11 +7,11 @@
  * February 11th, 2017
  */
 
-import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.List;
 import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.io.IOException;
 
@@ -28,9 +28,9 @@ public class DPLL {
 
 
 
-    // look for all non-unit clauses that contain the unit clause l and remove them,
-    // as there exists an assignment of the unit clause that makes all clauses with that literal
-    // true; additionally, remove from all clauses any instance of the negated unit clause
+    // look for all non-unit clauses that contain the literal l and remove them,
+    // as there exists an assignment of the literal that makes all clauses containing l
+    // true; additionally, remove from all clauses any instance of the negated literal !l
     private static CNF unit_propogate(Literal l, CNF formula) {
         Literal negated_l = l.createNegatedLiteral();
 
@@ -40,13 +40,21 @@ public class DPLL {
             // remove all non-unit clauses containing the literal l
             if (!c.isUnitClause() && c.literals.contains(l)) {
                 i.remove();
+                System.out.println("removing clause: " + c);
                 continue;
             }
 
             // in every clause that contains the negated literal !l, delete it
-            while (c.literals.indexOf(negated_l) != -1) {
+            while (c.literals.contains(negated_l)) {
                 // we are not modifying the actual iterator here so it is a safe operation!
                 c.literals.remove(negated_l);
+
+                // if we have removed all literals from the clause, delete the clause
+                // TODO: is the above correct? an empty clause implies unsatisfiability..
+                if (c.literals.size() == 0) {
+                    i.remove();
+                }
+                System.out.println("removing literal:" + negated_l);
             }
         }
 
@@ -54,31 +62,6 @@ public class DPLL {
     }
 
 
-
-    // TODO: has been replaced by unit_propogate.. will remove
-    private void propogate_units(CNF formula) {
-        for(Iterator<Clause> iterator1 = formula.clauses.iterator(); iterator1.hasNext();) {
-            Clause c = iterator1.next();
-
-            if (c.isUnitClause()) {
-                //Literal l = c.literals.toArray(new Literal[1])[0]; // grab the only literal in the clause
-
-                // look for all non-unit clauses that contain the single literal x in c and remove them,
-                // as there exists an assignment of the unit clause c that makes all clauses with x true
-                for(Iterator<Clause> iterator2 = formula.clauses.iterator(); iterator2.hasNext();) {
-                    Clause other = iterator2.next();
-
-                    // remove all non-unit clauses that contain the literal unit cluase c
-                    /*if (!other.isUnitClause() && other.contains(c)) {
-                        iterator2.remove(); //formula.clauses.remove(other);
-                    }*/
-
-                    // remove all instances of the negated literal c in every clause
-
-                }
-            }
-        }
-    }
 
     private void pure_literal_elimination(CNF formula) {
 
@@ -90,37 +73,34 @@ public class DPLL {
     // A positive literal is represented internally as a positive int (+x); a
     // negavtive literal is represented internally as a negative int (-x)
     private class Literal {
-        char s; // symbol of literal
-        int l; // +l = a positive literal; -l = a negative literal
+        String s; // symbol of literal
+        boolean sign; // sign of literal; true=a positive literal, false=a negative literal
         boolean val; // the value actually assigned to the symbol (!A where A has value true is false)
         boolean isAssigned; // flag for this literal being assigned in the DPLL algorithm
 
-        // Parse out a Literal from a String!
+        // parse out a Literal from a String
         public Literal(String litStr) {
-            if (litStr.length() == 0)
+            if (litStr != null && litStr.length() == 0)
                 System.err.println("Invalid literal instantiation.");
-            else if (litStr.length() == 1) { // positive literal A
-                s = litStr.charAt(0);
-                l = (int)s;
-            } else { // negative literal !A
-                s = litStr.charAt(1);
-                l = -s;
-            }
+            else if (litStr.charAt(0) == '!') {
+                sign = false; // negative literal
+                litStr = litStr.substring(1,litStr.length());
+            } else
+                sign = true; // positive literal
 
+            s = litStr;
             isAssigned = false;
         }
 
         // creates a literal with the given symbol and sign (sign=false=!A)
-        public Literal(char symbol, boolean sign) {
-            s = symbol;
-            if (sign)
-                l = (int)symbol; // positive literal
-            else
-                l = -symbol; // negative literal
+        public Literal(String symbol, boolean _sign) {
+            this.s = symbol;
+            this.sign = _sign;
 
-            isAssigned = false; // maybe not?
+            isAssigned = false;
         }
 
+        // equivalency is defined on the following attributes: symbol s, sign l
         @Override public boolean equals(Object other) {
             if (this == other) return true;
 
@@ -129,40 +109,40 @@ public class DPLL {
             Literal otherLit = (Literal)other;
 
             // TODO: may require comparison of val/isAssigned
-            return (s == otherLit.s && l == otherLit.l);
+            return (s.equals(otherLit.s) && sign == otherLit.sign);
         }
 
         @Override public int hashCode() {
             int result = 7; // prime number
 
             // compute hash value
-            result = 37*result + (int)s;
-            result = 37*result + l;
+            result = 37*result + s.hashCode();
+            result = 37*result + (sign?1:0);
 
             return result;
         }
 
         // compute the value of the literal with consideration of its sign
         public boolean computeValue() {
-            if (l>0) // positive literal
+            if (sign) // positive literal
                 return val;
             else // negative literal
                 return !val;
         }
 
-        // negate the literal by flipping the sign of the integer representation
+        // negate the literal by flipping the boolean value of the sign
         public void negate() {
-            l = -l;
+            sign = !sign;
         }
 
         // creates an instance of this literal that is negated
         public Literal createNegatedLiteral() {
-            return new Literal(this.s, this.l > 0 ? false:true);
+            return new Literal(this.s, !this.sign);
         }
 
         // convenience method to print out a literal
         public String toString() {
-            return (this.l > 0 ? "":"!") + s;
+            return (this.sign ? "" : "!") + s;
         }
     }
 
@@ -219,55 +199,71 @@ public class DPLL {
 
     // Wrapper class for a propositional logic formula in CNF
     public class CNF {
-        Set<Literal> literals;
+        Set<Literal> allLiterals; // may contain !A and A
         LinkedList<Clause> clauses;
         String formula; // CNF formula in clausal form
 
         public CNF(String _cnf) {
+            allLiterals = new HashSet<Literal>();
             clauses = new LinkedList<Clause>();
             formula = _cnf;
-
-            // TODO: parse CNF string into Clauses & Literals
 
             formula = formula.substring(1, formula.length() - 1); // trim off curly braces
 
             int index = 0;
             while (index < formula.length()) {
                 if (formula.charAt(index) == '(') {
-                    int endBracket = formula.indexOf(')', index);
-                    String[] literals = formula.substring(index+1, endBracket).split(",");
+                    int endBracket = formula.indexOf(')', index); // guaranteed a matching end bracket
+                    String[] strLiterals = formula.substring(index+1, endBracket).split(",");
 
-                    clauses.add(new Clause(literals));
+                    // add a new clause from the set of literals
+                    Clause c = new Clause(strLiterals);
+                    clauses.add(c);
+
+                    // add all unique literals to the set of literals in this CNF formula
+                    for (Literal lit:c.literals)
+                        allLiterals.add(lit);
 
                     // update current index in CNF clausal form sentence
                     index = endBracket + 1;
                 } else if (formula.charAt(index) == ',') {
                     index++;
-                } else { // unit clause (a single literal without brackets)
-                    if (formula.charAt(index) == '!') {
-                        // parse !A
-                        clauses.add(new Clause(formula.substring(index, index+2)));
-                        index += 2;
-                    } else {
-                        // parse A
-                        clauses.add(new Clause("" + formula.charAt(index)));
-                        index++;
+                } else { // parse unit clause (a single literal without brackets)
+                    int endClause = formula.indexOf(',', index);
+                    if (endClause == -1) { // case where we are at the last clause in the formula
+                        endClause = formula.length();
                     }
+
+                    // create a new unit clause & add it to the set of all literals for this formula
+                    Clause c = new Clause(formula.substring(index, endClause));
+                    clauses.add(c);
+                    allLiterals.add(c.literals.get(0));
+
+                    index = endClause + 1;
                 }
             }
         }
 
         // find the first instance of a unit clause in the formula; note that a unit clause
         // is simply a clause that contains only one literal (!A or A)
-        public Clause find_unit_clause() {
+        public ArrayList<Clause> find_all_unit_clauses() {
+            ArrayList<Clause> unit_clauses = new ArrayList<Clause>();
+
             for(Iterator<Clause> i = this.clauses.iterator(); i.hasNext();) {
                 Clause c = i.next();
 
                 if (c.isUnitClause())
-                    return c;
+                    unit_clauses.add(c);
             }
 
-            return null;
+            return unit_clauses;
+        }
+
+        public void eliminate_pure_literals() {
+            for (Literal l: this.allLiterals) {
+                // if we find an instance of the negated literal, l is NOT pure
+                Literal negated_l = l.createNegatedLiteral();
+            }
         }
 
         // convenience method to print out a CNF formula in clausal form
@@ -296,16 +292,31 @@ public class DPLL {
             System.out.println(cnf.formula);
             System.out.println(cnf);
 
-            Clause c = cnf.find_unit_clause();
-            System.out.println(c);
+            /*for (Literal lit:cnf.allLiterals)
+                System.out.println("~" + lit);*/
+
+
+            ArrayList<Clause> all_unit_clauses = cnf.find_all_unit_clauses();
+            for (Clause unit_clause : all_unit_clauses) {
+                cnf = unit_propogate(unit_clause.toLiteral(), cnf);
+                System.out.println(cnf);
+            }
+
+
+            /*while (c != null) {
+                System.out.println("unit_clause: " + c);
+                cnf = unit_propogate(c.toLiteral(), cnf);
+
+                c = cnf.find_all_unit_clauses();
+            }
 
             cnf = unit_propogate(c.toLiteral(), cnf);
             System.out.println(cnf);
 
-            c = cnf.find_unit_clause();
+            //c = cnf.find_unit_clause();
 
             cnf = unit_propogate(c.toLiteral(), cnf);
-            System.out.println(cnf);
+            System.out.println(cnf);*/
 
 
             TextFile.writeFile(SAT);
