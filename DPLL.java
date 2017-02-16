@@ -7,11 +7,11 @@
  * February 11th, 2017
  */
 
-import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.List;
 import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.io.IOException;
 
@@ -40,6 +40,7 @@ public class DPLL {
             // remove all non-unit clauses containing the literal l
             if (!c.isUnitClause() && c.literals.contains(l)) {
                 i.remove();
+                System.out.println("removing clause: " + c);
                 continue;
             }
 
@@ -47,6 +48,13 @@ public class DPLL {
             while (c.literals.contains(negated_l)) {
                 // we are not modifying the actual iterator here so it is a safe operation!
                 c.literals.remove(negated_l);
+
+                // if we have removed all literals from the clause, delete the clause
+                // TODO: is the above correct? an empty clause implies unsatisfiability..
+                if (c.literals.size() == 0) {
+                    i.remove();
+                }
+                System.out.println("removing literal:" + negated_l);
             }
         }
 
@@ -225,8 +233,6 @@ public class DPLL {
             clauses = new LinkedList<Clause>();
             formula = _cnf;
 
-            // TODO: parse CNF string into Clauses & Literals
-
             formula = formula.substring(1, formula.length() - 1); // trim off curly braces
 
             int index = 0;
@@ -258,22 +264,24 @@ public class DPLL {
                     clauses.add(c);
                     allLiterals.add(c.literals.get(0));
 
-                    index += endClause;
+                    index = endClause + 1;
                 }
             }
         }
 
         // find the first instance of a unit clause in the formula; note that a unit clause
         // is simply a clause that contains only one literal (!A or A)
-        public Clause find_unit_clause() {
+        public ArrayList<Clause> find_all_unit_clauses() {
+            ArrayList<Clause> unit_clauses = new ArrayList<Clause>();
+
             for(Iterator<Clause> i = this.clauses.iterator(); i.hasNext();) {
                 Clause c = i.next();
 
                 if (c.isUnitClause())
-                    return c;
+                    unit_clauses.add(c);
             }
 
-            return null;
+            return unit_clauses;
         }
 
         public void eliminate_pure_literals() {
@@ -309,19 +317,31 @@ public class DPLL {
             System.out.println(cnf.formula);
             System.out.println(cnf);
 
-            for (Literal lit:cnf.allLiterals)
-                System.out.println("~" + lit);
+            /*for (Literal lit:cnf.allLiterals)
+                System.out.println("~" + lit);*/
 
-            Clause c = cnf.find_unit_clause();
-            System.out.println(c);
+
+            ArrayList<Clause> all_unit_clauses = cnf.find_all_unit_clauses();
+            for (Clause unit_clause : all_unit_clauses) {
+                cnf = unit_propogate(unit_clause.toLiteral(), cnf);
+                System.out.println(cnf);
+            }
+
+
+            /*while (c != null) {
+                System.out.println("unit_clause: " + c);
+                cnf = unit_propogate(c.toLiteral(), cnf);
+
+                c = cnf.find_all_unit_clauses();
+            }
 
             cnf = unit_propogate(c.toLiteral(), cnf);
             System.out.println(cnf);
 
-            c = cnf.find_unit_clause();
+            //c = cnf.find_unit_clause();
 
             cnf = unit_propogate(c.toLiteral(), cnf);
-            System.out.println(cnf);
+            System.out.println(cnf);*/
 
 
             TextFile.writeFile(SAT);
