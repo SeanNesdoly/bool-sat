@@ -7,7 +7,8 @@
  * February 11th, 2017
  * 
  * TODO: properly group multiple occurences of the same operator (A^BvA^C)
- */
+ * TODO: ensure that simple expressions are still grouped, ex. A^B is (A^B) 
+*/
 package converttocnf;
 
 import java.util.LinkedHashMap;
@@ -23,19 +24,29 @@ public class ConvertToCNF {
     private static String otherOp = Pattern.quote("^v<->");
     
     public static void addEquivalences() {
-        equivalenceMap.put("(.+)<->(.+)","({1}->{2})^({2}->{1})");
-        equivalenceMap.put("(.+)->(.+)","!{1}v{2}");
-        //equivalenceMap.put("!((.+))","{1}");
-        equivalenceMap.put("![(](.+)^(.+)[)]","!{1}v!{2}");
-        equivalenceMap.put("!/((.+)v(.+)/)", "!{1}^!{2}");
+        equivalenceMap.put(left + "(.+)<->(.+)" + right,"({1}->{2})^({2}->{1})");
+        equivalenceMap.put(left + "(.+)->(.+)" + right,"!{1}v{2}");
+        equivalenceMap.put("!" + left + "(.+)\\^(.+)" + right,"!{1}v!{2}");
+        equivalenceMap.put("!" + left +"(.+)v(.+)" + right, "!{1}^!{2}");
         equivalenceMap.put("!!(.+)","{1}");
-        equivalenceMap.put("(.+)v/((.+)^(.+)/)","({1}v{2})^({1}v{3})");
+        equivalenceMap.put("(.+)v" + left + "(.+)\\^(.+)" + right,"({1}v{2})^({1}v{3})");
     }
+    
+    
+    /* Takes input in CNF and converts it into clause form. */
+    public static String writeInClauseForm(String convertedInput) {
+        // extract all groups of the form (AvB)
+        String clauseForm;
+        clauseForm = convertedInput.replaceAll("v", ",");
+        clauseForm = clauseForm.replaceAll("\\^", ",");
+        clauseForm = "{" + clauseForm + "}";
+        return clauseForm;
+    }
+    
     
     /* Takes grouped expression and converts it to CNF based on equivalence rules. */
     public static String convertToCNF(String groupedInput) {
         for (String leftSide : equivalenceMap.keySet()) {
-            //System.out.println(leftSide);
             if (groupedInput.matches(leftSide)) {
                 System.out.println(leftSide);
                 String rightSide = equivalenceMap.get(leftSide);
@@ -56,9 +67,10 @@ public class ConvertToCNF {
     
    /* Groups expression according to precedence, wrapping parentheses around a group. */
     public static String groupByOperator(String input) { 
-        String regex = "#";
+        String regex;
         for (String operator : operators) {
-            System.out.println("input: " + input);
+            regex = "#";
+            System.out.println("input: " + input + " operator: " + operator);
             // brackets on both sides
             if (input.matches(".*" + right + operator + left + ".*")) {
                 regex = "(" + left + ".*" + right + operator + left + ".*" + right + ").*";
@@ -101,12 +113,16 @@ public class ConvertToCNF {
     }
     
     public static void main(String[] args) {
-        String input = "A^BvC^D";
+        addEquivalences();
+        String input = "(A<->B)";
         input = input.replaceAll("\\s+",""); // get rid of any whitespace
-        String groupedInput = groupByOperator(input);
-        System.out.println(groupedInput);
-        //String convertedInput = convertToCNF(groupedInput);
+        //String groupedInput = groupByOperator(input);
+        //System.out.println(groupedInput);
+        //String convertedInput = convertToCNF(input);
         //System.out.println("Converted to CNF: " + convertedInput);
+        String convertedInput = "(AvB)^(BvC)";
+        String clauseForm = writeInClauseForm(convertedInput);
+        System.out.println("Clause form: " + clauseForm);
     }
     
 }
