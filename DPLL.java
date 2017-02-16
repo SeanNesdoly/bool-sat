@@ -63,31 +63,6 @@ public class DPLL {
 
 
 
-    // TODO: has been replaced by unit_propogate.. will remove
-    private void propogate_units(CNF formula) {
-        for(Iterator<Clause> iterator1 = formula.clauses.iterator(); iterator1.hasNext();) {
-            Clause c = iterator1.next();
-
-            if (c.isUnitClause()) {
-                //Literal l = c.literals.toArray(new Literal[1])[0]; // grab the only literal in the clause
-
-                // look for all non-unit clauses that contain the single literal x in c and remove them,
-                // as there exists an assignment of the unit clause c that makes all clauses with x true
-                for(Iterator<Clause> iterator2 = formula.clauses.iterator(); iterator2.hasNext();) {
-                    Clause other = iterator2.next();
-
-                    // remove all non-unit clauses that contain the literal unit cluase c
-                    /*if (!other.isUnitClause() && other.contains(c)) {
-                        iterator2.remove(); //formula.clauses.remove(other);
-                    }*/
-
-                    // remove all instances of the negated literal c in every clause
-
-                }
-            }
-        }
-    }
-
     private void pure_literal_elimination(CNF formula) {
 
     }
