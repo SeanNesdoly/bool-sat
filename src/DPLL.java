@@ -20,7 +20,11 @@ public class DPLL {
     private static final String SAT = "The conclusion follows logically from the premises.\n";
     private static final String UNSAT = "The conclusion does not follow logically from the premises.\n";
 
-    public boolean dpll(Set<Literal> literals, Set<Clause> clauses) {
+    public boolean dpll(CNF F) {
+
+        if (F.containsEmptyClause())
+            return false;
+
 
 
         return false;
@@ -31,7 +35,7 @@ public class DPLL {
     // look for all non-unit clauses that contain the literal l and remove them,
     // as there exists an assignment of the literal that makes all clauses containing l
     // true; additionally, remove from all clauses any instance of the negated literal !l
-    private static CNF unit_propogate(Literal l, CNF formula) {
+    private static CNF unit_propagate(Literal l, CNF formula) {
         Literal negated_l = l.createNegatedLiteral();
 
         for(Iterator<Clause> i = formula.clauses.iterator(); i.hasNext();) {
@@ -39,8 +43,9 @@ public class DPLL {
 
             // remove all non-unit clauses containing the literal l
             if (!c.isUnitClause() && c.literals.contains(l)) {
-                i.remove();
                 System.out.println("removing clause: " + c);
+                //i.remove();
+                c.setClauseTrue();
                 continue;
             }
 
@@ -152,24 +157,41 @@ public class DPLL {
     // is a unit clause, which is only 1 literal!
     private class Clause {
 
-        LinkedList<Literal> literals;
+        LinkedList<Literal> literals; // the set of disjuncted literals in the clause
+        private boolean value; // the truth value of the clause
 
+        // constructor for creating a clause from an array of literals
         public Clause(String[] literals) {
             this.literals = new LinkedList<Literal>();
             for (String l : literals) {
                 this.literals.add(new Literal(l));
             }
+
+            value = false; // default
         }
 
+        // constructor for creating a unit clause
         public Clause(String l) {
             literals = new LinkedList<Literal>();
             Literal unitClause = new Literal(l);
             literals.add(unitClause);
+
+            value = false; // default
+        }
+
+        // if a literal has been set true in this clause, then the entire clause is true
+        public void setClauseTrue() {
+            this.value = true;
         }
 
         // determines if this clause is a unit clause (only 1 literal)
         public boolean isUnitClause() {
             return literals.size() == 1;
+        }
+
+        // determines if this clause has no literals
+        public boolean isEmptyClause() {
+            return literals.size() == 0;
         }
 
         // converts a unit clause to a single literal
@@ -183,6 +205,9 @@ public class DPLL {
 
         // convenience method to print out a clause in clausal form
         public String toString() {
+            if (this.value)
+                return "true";
+
             if (this.isUnitClause())
                 return this.toLiteral().toString();
 
@@ -199,9 +224,9 @@ public class DPLL {
 
     // Wrapper class for a propositional logic formula in CNF
     public class CNF {
-        Set<Literal> allLiterals; // may contain !A and A
-        LinkedList<Clause> clauses;
         String formula; // CNF formula in clausal form
+        Set<Literal> allLiterals; // the set of all unique literals in the CNF formula
+        LinkedList<Clause> clauses; // the set of clauses in the CNF formula
 
         public CNF(String _cnf) {
             allLiterals = new HashSet<Literal>();
@@ -224,9 +249,8 @@ public class DPLL {
                     for (Literal lit:c.literals)
                         allLiterals.add(lit);
 
-                    // update current index in CNF clausal form sentence
-                    index = endBracket + 1;
-                } else if (formula.charAt(index) == ',') {
+                    index = endBracket + 1; // update current index in the CNF formula
+                } else if (formula.charAt(index) == ',') { // skip over commas between clauses
                     index++;
                 } else { // parse unit clause (a single literal without brackets)
                     int endClause = formula.indexOf(',', index);
@@ -239,7 +263,7 @@ public class DPLL {
                     clauses.add(c);
                     allLiterals.add(c.literals.get(0));
 
-                    index = endClause + 1;
+                    index = endClause + 1; // update current index in the CNF formula
                 }
             }
         }
@@ -266,6 +290,16 @@ public class DPLL {
             }
         }
 
+        public boolean containsEmptyClause() {
+            for(Iterator<Clause> i = this.clauses.iterator(); i.hasNext();) {
+                Clause c = i.next();
+                if (c.isEmptyClause())
+                    return true;
+            }
+
+            return false; // we did not find an empty clause
+        }
+
         // convenience method to print out a CNF formula in clausal form
         public String toString() {
             String out = "{";
@@ -286,7 +320,7 @@ public class DPLL {
             formulas = TextFile.readFile();
             //System.out.println(formulas.get(0));
 
-            // TODO: parse formulas into CNF in clausal form from Mary
+            // TODO: parse formulas into clausal CNF from Mary
 
             CNF cnf = new DPLL().new CNF(formulas.get(0));
             System.out.println(cnf.formula);
@@ -298,24 +332,24 @@ public class DPLL {
 
             ArrayList<Clause> all_unit_clauses = cnf.find_all_unit_clauses();
             for (Clause unit_clause : all_unit_clauses) {
-                cnf = unit_propogate(unit_clause.toLiteral(), cnf);
+                cnf = unit_propagate(unit_clause.toLiteral(), cnf);
                 System.out.println(cnf);
             }
 
 
             /*while (c != null) {
                 System.out.println("unit_clause: " + c);
-                cnf = unit_propogate(c.toLiteral(), cnf);
+                cnf = unit_propagate(c.toLiteral(), cnf);
 
                 c = cnf.find_all_unit_clauses();
             }
 
-            cnf = unit_propogate(c.toLiteral(), cnf);
+            cnf = unit_propagate(c.toLiteral(), cnf);
             System.out.println(cnf);
 
             //c = cnf.find_unit_clause();
 
-            cnf = unit_propogate(c.toLiteral(), cnf);
+            cnf = unit_propagate(c.toLiteral(), cnf);
             System.out.println(cnf);*/
 
 
