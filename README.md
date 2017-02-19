@@ -16,14 +16,16 @@ Choose one of the following commands to compile and run a problem:
 
 ```bash
 cd path/to/bool-sat
-ant -Darg=NUM // where NUM is the desired problem number to run
+ant -Darg=NUM 
 ```
 
 ```bash
 cd path/to/bool-sat
 ant compile
-java -jar build/jar/bool-sat.jar NUM // where NUM is the desired problem number to run
+java -jar build/jar/bool-sat.jar NUM
 ```
+
+where NUM specifies the desired problem number to run!
 
 ## Conversion to CNF
 **TODO**: README for running solution
