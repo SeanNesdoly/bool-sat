@@ -1,3 +1,5 @@
+package boolsat;
+
 /*
  * An implementation of the DPLL Algorithm for deciding the satisfiability of
  * propositional logic formulae in conjuctive normal form.
@@ -17,10 +19,10 @@ import java.io.IOException;
 
 public class DPLL {
 
-    private static final String SAT = "The conclusion follows logically from the premises.\n";
-    private static final String UNSAT = "The conclusion does not follow logically from the premises.\n";
+    public static final String SAT = "The conclusion follows logically from the premises.\n";
+    public static final String UNSAT = "The conclusion does not follow logically from the premises.\n";
 
-    public boolean dpll(CNF F) {
+    public boolean dpll(CNF F, CNF U) {
 
         if (F.containsEmptyClause())
             return false;
@@ -35,7 +37,7 @@ public class DPLL {
     // look for all non-unit clauses that contain the literal l and remove them,
     // as there exists an assignment of the literal that makes all clauses containing l
     // true; additionally, remove from all clauses any instance of the negated literal !l
-    private static CNF unit_propagate(Literal l, CNF formula) {
+    public static CNF unit_propagate(Literal l, CNF formula) {
         Literal negated_l = l.createNegatedLiteral();
 
         for(Iterator<Clause> i = formula.clauses.iterator(); i.hasNext();) {
@@ -77,7 +79,7 @@ public class DPLL {
     // Wrapper class for a propositional logic literal (A | !A).
     // A positive literal is represented internally as a positive int (+x); a
     // negavtive literal is represented internally as a negative int (-x)
-    private class Literal {
+    public class Literal {
         String s; // symbol of literal
         boolean sign; // sign of literal; true=a positive literal, false=a negative literal
         boolean val; // the value actually assigned to the symbol (!A where A has value true is false)
@@ -155,7 +157,7 @@ public class DPLL {
 
     // Wrapper class for the disjunction of a set of Literals; the only exception
     // is a unit clause, which is only 1 literal!
-    private class Clause {
+    public class Clause {
 
         LinkedList<Literal> literals; // the set of disjuncted literals in the clause
         private boolean value; // the truth value of the clause
@@ -312,7 +314,7 @@ public class DPLL {
     }
 
 
-
+/*
     public static void main(String[] args) {
 
         ArrayList<String> formulas = null;
@@ -326,8 +328,8 @@ public class DPLL {
             System.out.println(cnf.formula);
             System.out.println(cnf);
 
-            /*for (Literal lit:cnf.allLiterals)
-                System.out.println("~" + lit);*/
+            //for (Literal lit:cnf.allLiterals)
+            //    System.out.println("~" + lit);
 
 
             ArrayList<Clause> all_unit_clauses = cnf.find_all_unit_clauses();
@@ -337,7 +339,7 @@ public class DPLL {
             }
 
 
-            /*while (c != null) {
+            while (c != null) {
                 System.out.println("unit_clause: " + c);
                 cnf = unit_propagate(c.toLiteral(), cnf);
 
@@ -350,7 +352,7 @@ public class DPLL {
             //c = cnf.find_unit_clause();
 
             cnf = unit_propagate(c.toLiteral(), cnf);
-            System.out.println(cnf);*/
+            System.out.println(cnf);
 
 
             TextFile.writeFile(SAT);
@@ -359,5 +361,6 @@ public class DPLL {
             return;
         }
 
-    }
+    }*/
+
  }

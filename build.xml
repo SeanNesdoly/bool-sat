@@ -1,11 +1,12 @@
 <project name="bool-sat" basedir="." default="main">
 
-    <property name="src.dir" value="src" />
-    <property name="build.dir"   value="build"/>
-    <property name="classes.dir" value="${build.dir}/classes"/>
-    <property name="jar.dir"     value="${build.dir}/jar"/>
+    <!-- set global properties for this build-->
+    <property name="src.dir"     location="src/boolsat" />
+    <property name="build.dir"   location="build"/>
+    <property name="classes.dir" location="${build.dir}/classes"/>
+    <property name="jar.dir"     location="${build.dir}/jar"/>
 
-    <property name="main-class"  value="main"/>
+    <property name="main-class"  value="boolsat.Main"/>
 
     <target name="clean">
         <delete dir="${build.dir}"/>
@@ -13,7 +14,7 @@
 
     <target name="compile">
         <mkdir dir="${classes.dir}"/>
-        <javac srcdir="${src.dir}" destdir="${classes.dir}"/>
+        <javac srcdir="${src.dir}" destdir="${classes.dir}" />
     </target>
 
     <target name="jar" depends="compile">
@@ -25,7 +26,7 @@
         </jar>
     </target>
 
-    <target name="run" depends="jar" description="run the project">
+    <target name="run" depends="jar">
         <java jar="${jar.dir}/${ant.project.name}.jar" fork="true">
             <arg value="${arg}"/>
         </java>

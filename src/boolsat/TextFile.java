@@ -1,3 +1,5 @@
+package boolsat;
+
 /*
  * A utility class that handles input & output from a text file. All methods
  * within this class are static, and thus it should not be instantiated as an
