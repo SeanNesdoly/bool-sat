@@ -11,13 +11,15 @@
 */
 package converttocnf;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ConvertToCNF {
     
-    private static String[] operators = {"\\^","v","->","<->"};
+    private static ArrayList<String> operators = new ArrayList<>();
     private static LinkedHashMap<String,String> equivalenceMap = new LinkedHashMap();
     private static String left = Pattern.quote("(");
     private static String right = Pattern.quote(")"); 
@@ -32,7 +34,13 @@ public class ConvertToCNF {
         equivalenceMap.put("(.+)v" + left + "(.+)\\^(.+)" + right,"({1}v{2})^({1}v{3})");
     }
     
-    
+    public static void populateOperatorList() {
+        operators.add("\\^");
+        operators.add("v");
+        operators.add("->");
+        operators.add("<->");
+    }
+ 
     /* Takes input in CNF and converts it into clause form. */
     public static String writeInClauseForm(String convertedInput) {
         // extract all groups of the form (AvB)
@@ -65,64 +73,91 @@ public class ConvertToCNF {
         return groupedInput;
     }    
     
-   /* Groups expression according to precedence, wrapping parentheses around a group. */
-    public static String groupByOperator(String input) { 
-        String regex;
+    /* Returns list of all operators used in a particular expression. */
+    public static ArrayList<String> findOperators(String input) {
+        ArrayList<String> inputOperators = new ArrayList<>();
         for (String operator : operators) {
-            regex = "#";
-            System.out.println("input: " + input + " operator: " + operator);
-            // brackets on both sides
-            if (input.matches(".*" + right + operator + left + ".*")) {
-                regex = "(" + left + ".*" + right + operator + left + ".*" + right + ").*";
+            if (input.matches(".*\\w+" + operator + "\\w+.*"))
+                inputOperators.add(operator);         
+        }
+        return inputOperators;
+    }
+    
+    
+   /* Groups expression according to precedence, wrapping parentheses around a group. */
+    public static String groupByOperator(String input, ArrayList<String> inputOperators) {     
+        ArrayList<String> otherOperators;
+        for (String operator : inputOperators) {
+            otherOperators = (ArrayList<String>)inputOperators.clone();
+            if (operator.equals("\\^") || operator.equals("v")) {
+                // don't recognize self as another operator when parsing
+                otherOperators.remove(operator);
             }
-            // bracket on right side of operator
-            else if (input.matches(".*" + operator + left + ".*")) {
-                // if no operators before or after operands, ex. Av(B^C)
-                if (input.matches("[^" + otherOp + "]+" + operator + left + ".*" + right))
-                    regex = "#"; // no need to bracket
-                else
-                    regex = "[" + otherOp + "]*" + "([^" + otherOp + "]+" + operator + left + ".*" + right + ").*";
-            }
-            // bracket on left side of operator, ex. (A^B)vC->A
-            else if (input.matches(".*" + right + operator + ".*")) {
-                // if no operators before or after operands, ex. (A^B)vC
-                if (input.matches(left + ".*" + right + operator + "[^" + otherOp + "]+"))
-                    regex = "#"; // no need to bracket
-                else
-                    regex = ".*(" + left + ".*" + right + operator + "[^" + otherOp +"]+).*";
-            }
-            // general case with no bracketing, ex. AvB^C
-            else if (input.matches(".*[^" + otherOp + "]+" + operator + "[^" + otherOp +"]+.*")) {
-                System.out.println("matches");
-                regex = ".*[" + otherOp + "]*" + "([^" + otherOp + "]+" + operator + "[^" + otherOp +"]+).*";
-            }
-            if (input.matches(regex)) {
-                System.out.println("regex: " + regex);
-                Pattern pattern = Pattern.compile(regex);
-                Matcher matcher = pattern.matcher(input);
-                int i = 0;
-                while (matcher.find()) {
-                    i++;
-                    System.out.println("group " + i + ": " + matcher.group(i));
-                    input = input.replace(matcher.group(i),"(" + matcher.group(i) + ")");
-
-                }
-              }
-            }       
+            Pattern pattern = Pattern.compile("(" + operator + ")");
+            Matcher matcher = pattern.matcher(input);
+            int i = 0;
+            int j,k;
+            while (matcher.find()) {
+                System.out.println("group: " + matcher.group(1));
+                j = matcher.start();
+                k = matcher.end();
+                i++;
+             }       
+         }
+        
         return input;
     }
     
-    public static void main(String[] args) {
-        addEquivalences();
-        String input = "(A<->B)";
-        input = input.replaceAll("\\s+",""); // get rid of any whitespace
-        //String groupedInput = groupByOperator(input);
-        //System.out.println(groupedInput);
-        //String convertedInput = convertToCNF(input);
-        //System.out.println("Converted to CNF: " + convertedInput);
-        String convertedInput = "(AvB)^(BvC)";
-        String clauseForm = writeInClauseForm(convertedInput);
-        System.out.println("Clause form: " + clauseForm);
+    /* Takes a formula and groups it by operator, converts it to CNF, and writes 
+    it in clause form. */
+    public static void processInput(String formula) {
+        ArrayList<String> inputOperators = findOperators(formula); 
+        // if the only operator is '^' or 'v', no grouping is required
+        if (inputOperators.size() == 1) {
+            if (inputOperators.contains("\\^") || inputOperators.contains("v")) {
+                // if formula is string of v's, bracket whole expression
+                if (inputOperators.contains("v"))
+                    formula = "(" + formula + ")";
+            }
+        }
+        else { 
+            formula = groupByOperator(formula, inputOperators);
+            
+            //String convertedInput = convertToCNF(input);
+            //System.out.println("Converted to CNF: " + convertedInput);
+            //String convertedInput = "fish->tasty^healthy";
+        }
+        System.out.println(formula);
+        //String clauseForm = writeInClauseForm(convertedInput);
+        //System.out.println("Clause form: " + clauseForm);
+    
     }
     
-}
+    /* Populates array lists and preps input for parsing. */
+    public static void main(String[] args) {
+        populateOperatorList();
+        ArrayList<String> input = null;
+        String formula = "AvB<->AvC";
+        /*
+        try {
+            input = TextFile.readFile();
+            formula = input.get(0);
+            System.out.println(formula);
+            
+            
+            
+            
+            TextFile.writeFile("bud");
+        }
+        catch (IOException ex) {
+            System.err.println(ex.getMessage());
+            return; 
+        }
+*/
+        //addEquivalences();
+        formula = formula.replaceAll("\\s+",""); // get rid of any whitespace
+        processInput(formula);
+     
+        }
+    }
+    
