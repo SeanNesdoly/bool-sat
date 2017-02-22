@@ -83,6 +83,66 @@ public class ConvertToCNF {
         return inputOperators;
     }
     
+    public static int scanBackwards(int j,String input,ArrayList<String> otherOps) {
+        System.out.println("enter j: " + j);
+        int rightCount = 0;
+        int leftCount = 0;
+        boolean foundOp = false;
+        String literalChar;
+        char character = input.charAt(--j);
+        while (j > 0) {
+            if (character == ')')
+                rightCount++;
+            if (character == '(') {
+                leftCount++;
+                if (leftCount == rightCount)
+                    break;
+            }
+            // if character is part of another operator 
+            for (String op : otherOps) {
+                literalChar = Pattern.quote(Character.toString(character));
+                if (op.matches(".*" + literalChar + ".*"))  {
+                    foundOp = true;
+                    break;
+                }
+            }
+            if (foundOp && rightCount == 0)
+                break;
+            character = input.charAt(--j); // decrement then get char
+        }
+        return j;     
+    }
+    
+    public static int scanForwards(int k, String input, ArrayList<String> otherOps) {
+        int leftCount = 0;
+        int rightCount = 0;
+        boolean foundOp = false;
+        String literalChar;
+        System.out.println("enter k: " + k);
+        char character;
+        while (k < input.length()) {
+            character = input.charAt(k); 
+            if (character == '(')
+                leftCount++;
+            if (character == ')') {
+                rightCount++;
+                if (rightCount == leftCount)
+                    break;
+            }
+            for (String op : otherOps) {
+                literalChar = Pattern.quote(Character.toString(character));
+                if (op.matches(".*" + literalChar + ".*")) {
+                    foundOp = true;
+                    break;
+                }
+            }
+            if (foundOp && leftCount == 0)
+                break;
+            k++;
+               
+        }
+        return k;
+    }
     
    /* Groups expression according to precedence, wrapping parentheses around a group. */
     public static String groupByOperator(String input, ArrayList<String> inputOperators) {     
@@ -97,12 +157,38 @@ public class ConvertToCNF {
             Matcher matcher = pattern.matcher(input);
             int i = 0;
             int j,k;
+            int bracketCount = 0;
+            String character;
             while (matcher.find()) {
-                System.out.println("group: " + matcher.group(1));
-                j = matcher.start();
-                k = matcher.end();
+                j = matcher.start() + bracketCount;
+                k = matcher.end() + bracketCount;              
+                System.out.println("op: " + operator);
+                j = scanBackwards(j,input,otherOperators);
+                k = scanForwards(k,input,otherOperators);
+                System.out.println("return j: " + j);
+                System.out.println("return k: " + k);
+                // insert parentheses would wrap entire expression,
+                // or would overlap another pair of parentheses
+                //if (input.charAt(j) == '(' && input.charAt(k) == ')')
+                if ((j == 0 && k >= input.length()-1) || (input.charAt(j) == '(' && input.charAt(k-1) == ')'))
+                    continue;
+                else if (j == 0) {
+                    input = "(" + input;
+                    input = input.substring(0,k+1) + ")" + input.substring(k+1);
+                }
+                else if (k == input.length()) {
+                    input = input.substring(0,j+1) + "(" + input.substring(j+1);
+                    input = input + ")";                   
+                }
+                else {
+                    input = input.substring(0,j+1) + "(" + input.substring(j+1);
+                    input = input.substring(0,k+1) + ")" + input.substring(k+1);         
+                }
+                bracketCount = bracketCount + 2;
+                System.out.println(input);
                 i++;
-             }       
+             } 
+            
          }
         
         return input;
@@ -113,13 +199,11 @@ public class ConvertToCNF {
     public static void processInput(String formula) {
         ArrayList<String> inputOperators = findOperators(formula); 
         // if the only operator is '^' or 'v', no grouping is required
-        if (inputOperators.size() == 1) {
-            if (inputOperators.contains("\\^") || inputOperators.contains("v")) {
-                // if formula is string of v's, bracket whole expression
-                if (inputOperators.contains("v"))
-                    formula = "(" + formula + ")";
+        if (inputOperators.size() == 1 && ((inputOperators.contains("\\^") || inputOperators.contains("v")))) {
+            // if formula is string of v's, bracket whole expression
+            if (inputOperators.contains("v"))
+                formula = "(" + formula + ")";
             }
-        }
         else { 
             formula = groupByOperator(formula, inputOperators);
             
@@ -137,7 +221,7 @@ public class ConvertToCNF {
     public static void main(String[] args) {
         populateOperatorList();
         ArrayList<String> input = null;
-        String formula = "AvB<->AvC";
+        String formula = "A^B^C->A";
         /*
         try {
             input = TextFile.readFile();
