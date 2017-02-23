@@ -11,29 +11,17 @@ package converttocnf;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ConvertToCNF {
     
     private static ArrayList<String> operators = new ArrayList<>();
-    private static LinkedHashMap<String,String> equivalenceMap = new LinkedHashMap();
     private static String opCharacter = Pattern.quote("^v<->");
     private static String nonLiteral = Pattern.quote("^v<-()");
     private static String left = Pattern.quote("(");
     private static String right = Pattern.quote(")");
     
-    public static void addEquivalences() {
-        String left = Pattern.quote("(");
-        String right = Pattern.quote(")");
-        equivalenceMap.put(left + "(.+)<->(.+)" + right,"({1}->{2})^({2}->{1})");
-        equivalenceMap.put(left + "(.+)->(.+)" + right,"!{1}v{2}");
-        equivalenceMap.put("!" + left + "(.+)\\^(.+)" + right,"!{1}v!{2}");
-        equivalenceMap.put("!" + left +"(.+)v(.+)" + right, "!{1}^!{2}");
-        equivalenceMap.put("!!(.+)","{1}");
-        equivalenceMap.put("(.+)v" + left + "(.+)\\^(.+)" + right,"({1}v{2})^({1}v{3})");
-    }
     
     public static void populateOperatorList() {
         operators.add("\\^");
@@ -44,7 +32,6 @@ public class ConvertToCNF {
  
     /* Takes input in CNF and converts it into clause form. */
     public static String writeInClauseForm(String convertedInput) {
-        // extract all groups of the form (AvB)
         String clauseForm;
         clauseForm = convertedInput.replaceAll("v", ",");
         clauseForm = clauseForm.replaceAll("\\^", ",");
@@ -74,13 +61,15 @@ public class ConvertToCNF {
         while (groupedInput.matches(".*!!.+")) {
             groupedInput = removeDoubleNegation(groupedInput);
         }
-        while (groupedInput.matches(".+v" + left + ".+\\^.+" + right + ".*")) {
+        while (groupedInput.matches(".+v" + left + ".+\\^.+" + right + ".*") ||
+                groupedInput.matches(".*" + left + ".+\\^.+" + right + "v.+")) {
             groupedInput = distributeOr(groupedInput);
-        }
-        
-        
+        }  
         return groupedInput;
     }   
+    
+    /* Converts expressions of the form A<->B to (A->B)^(B->A), and expressions of 
+    the form A->B to !AvB */
     public static String convertImplicationOrIFF(String groupedInput, String operator) {
         String group;
         while (groupedInput.matches(".+" + operator + ".+")) {
@@ -97,19 +86,17 @@ public class ConvertToCNF {
                     if (operator.equals("<->")) 
                         equivalence  = "({1}->{2})^({2}->{1})";
                     else
-                        equivalence = "!{1}v{2}";
-                    
+                        equivalence = "(!{1}v{2})";
                     newGroup = equivalence.replace("{1}", subMatcher.group(1));
                     newGroup = newGroup.replace("{2}", subMatcher.group(2));
-                    groupedInput = groupedInput.replace(group,newGroup);
-                    
+                    groupedInput = groupedInput.replace(group,newGroup);  
                 }                
             }
         }
-        return groupedInput;
-        
+        return groupedInput;   
     }
     
+    /* Converts expressions of the form !(A^B) to !Av!B, or !(AvB) to !A^!B */
     public static String distributeNot(String groupedInput, String operator) {
         String group;
         while (groupedInput.matches(".*!" + left + ".+" + operator + ".+" + right + ".*")) {
@@ -138,6 +125,7 @@ public class ConvertToCNF {
         return groupedInput;
     }
     
+    /* Converts terms of the form !!A into A */
     public static String removeDoubleNegation(String groupedInput) {
         String group;
         while (groupedInput.matches(".*!!.+")) {
@@ -157,19 +145,35 @@ public class ConvertToCNF {
         }
         return groupedInput;     
     }
-       
+    
+    /* Converts expressions of the form Av(B^C) or (B^C)vA to: (AvB)^(AvC) */
     public static String distributeOr(String groupedInput) {
+        String generalRegex;
+        String groupRegex;
+        String subGroupRegex;
         String group;
-        while (groupedInput.matches(".+v" + left + ".+\\^.+" + right + ".*")) {
-            Pattern pattern = Pattern.compile("(" + "[^" + nonLiteral + "]+v" + left + "[^" + nonLiteral + "]+\\^[^" + nonLiteral + "]+" + right + ")");
+        String equivalence;
+        if (groupedInput.matches(".+v" + left + ".+\\^.+" + right + ".*")) {
+            generalRegex = ".+v" + left + ".+\\^.+" + right + ".*";
+            groupRegex = "(" + "[^" + nonLiteral + "]+v" + left + "[^" + nonLiteral + "]+\\^[^" + nonLiteral + "]+" + right + ")";
+            subGroupRegex = "([^" + nonLiteral + "]+)v" + left + "([^" + nonLiteral + "]+)\\^([^" + nonLiteral + "]+)" + right;
+            equivalence = "({1}v{2})^({1}v{3})";
+        }
+        else {
+            generalRegex = ".*" + left + ".+\\^.+" + right + "v.+";
+            groupRegex = "(" + left + "[^" + nonLiteral + "]+\\^[^" + nonLiteral + "]+" + right + "v[^" + nonLiteral + "]+)";
+            subGroupRegex = left + "([^" + nonLiteral + "]+)\\^([^" + nonLiteral + "]+)" + right + "v([^" + nonLiteral + "]+)";
+            equivalence = "({3}v{1})^({3}v{2})";
+        }
+        while (groupedInput.matches(generalRegex)) {
+            Pattern pattern = Pattern.compile(groupRegex);
             Matcher matcher = pattern.matcher(groupedInput);
             while (matcher.find()) {
                 group = matcher.group(1);
                 System.out.println("group: " + group);
-                Pattern subPattern = Pattern.compile("([^" + nonLiteral + "]+)v" + left + "([^" + nonLiteral + "]+)\\^([^" + nonLiteral + "]+)" + right);
+                Pattern subPattern = Pattern.compile(subGroupRegex);
                 Matcher subMatcher = subPattern.matcher(group);
                 if (subMatcher.find()) {
-                    String equivalence = "({1}v{2})^({1}v{3})";
                     String newGroup = equivalence.replace("{1}", subMatcher.group(1));
                     newGroup = newGroup.replace("{2}", subMatcher.group(2));
                     newGroup = newGroup.replace("{3}", subMatcher.group(3));
@@ -179,6 +183,7 @@ public class ConvertToCNF {
         }
         return groupedInput;
     }  
+    
     /* Returns list of all operators used in a particular expression. */
     public static ArrayList<String> findOperators(String input) {
         ArrayList<String> inputOperators = new ArrayList<>();
@@ -308,31 +313,22 @@ public class ConvertToCNF {
         if (!(inputOperators.size() == 1 && ((inputOperators.contains("\\^") || inputOperators.contains("v"))))) {
             formula = groupByOperator(formula, inputOperators);
             formula = convertToCNF(formula);
-
-            //System.out.println("Converted to CNF: " + convertedInput);
-            //String convertedInput = "fish->tasty^healthy";
         }
         System.out.println("result: " + formula);
-        //String clauseForm = writeInClauseForm(convertedInput);
-        //System.out.println("Clause form: " + clauseForm);
-    
+        String clauseForm = writeInClauseForm(formula);
+        System.out.println("Clause form: " + clauseForm);  
     }
     
     /* Populates array lists and preps input for parsing. */
     public static void main(String[] args) {
-        addEquivalences();
         populateOperatorList();
         ArrayList<String> input = null;
-        String formula = "!(A->B)vC";
+        String formula = "A<->B";
         /*
         try {
             input = TextFile.readFile();
             formula = input.get(0);
             System.out.println(formula);
-            
-            
-            
-            
             TextFile.writeFile("bud");
         }
         catch (IOException ex) {
@@ -340,7 +336,6 @@ public class ConvertToCNF {
             return; 
         }
 */
-        //addEquivalences();
         formula = formula.replaceAll("\\s+",""); // get rid of any whitespace
         processInput(formula);
      
