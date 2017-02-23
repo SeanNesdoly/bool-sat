@@ -56,15 +56,19 @@ public class ConvertToCNF {
     public static String convertToCNF(String groupedInput) {
         while (groupedInput.matches(".+<->.+")) {
             groupedInput = convertImplicationOrIFF(groupedInput,"<->");
+            System.out.println(groupedInput);
         }
         while (groupedInput.matches(".+->.+")) {
                 groupedInput = convertImplicationOrIFF(groupedInput,"->");
+                System.out.println(groupedInput);
         }
-        while (groupedInput.matches(".*" + left + "!" + left + ".+\\^.+" + right + ".*")) {
-            groupedInput = distributeOr(groupedInput,"\\^");
+        while (groupedInput.matches(".*!" + left + ".+\\^.+" + right + ".*")) {
+            groupedInput = distributeNot(groupedInput,"\\^");
+            System.out.println(groupedInput);
         }
-        while (groupedInput.matches(".*" + left + "!" + left + ".+v.+" + right + ".*")) {
-            groupedInput = distributeOr(groupedInput,"v");
+        while (groupedInput.matches(".*!" + left + ".+v.+" + right + ".*")) {
+            groupedInput = distributeNot(groupedInput,"v");
+            System.out.println(groupedInput);
         }
         
         
@@ -72,12 +76,13 @@ public class ConvertToCNF {
     }   
     public static String convertImplicationOrIFF(String groupedInput, String operator) {
         String group;
-        while (groupedInput.matches(left + ".+" + operator + ".+" + right)) {
-            Pattern pattern = Pattern.compile("(" + left + "+[^" + left + "]+" + operator + "[^" + right + "]+" + right + "+)");
+        while (groupedInput.matches(".*" + left + ".+" + operator + ".+" + right + ".*")) {
+            Pattern pattern = Pattern.compile("(" + left + "[^" + left + right + "]+" + operator + "[^" + left + right + "]+" + right + ")");
             Matcher matcher = pattern.matcher(groupedInput);
             while (matcher.find()) {
                 group = matcher.group(1);
-                Pattern subPattern = Pattern.compile(left + "(.+)" + operator + "(.+)" + right);
+                System.out.println("group: " + group);
+                Pattern subPattern = Pattern.compile(left + "+(.+)" + operator + "(.+)" + right + "+");
                 Matcher subMatcher = subPattern.matcher(group);
                 if (subMatcher.find()) {
                     String newGroup;
@@ -98,12 +103,40 @@ public class ConvertToCNF {
         
     }
     
-    public static String distributeOr(String groupedInput, String operator) {
-        return "hello";
+    public static String distributeNot(String groupedInput, String operator) {
+        String group;
+        while (groupedInput.matches(".*!" + left + ".+" + operator + ".+" + right + ".*")) {
+            Pattern pattern = Pattern.compile("(!" + left + "[^" + left + right + "]+" + operator + "[^" + left + right + "]+" + right + ")");
+            Matcher matcher = pattern.matcher(groupedInput);
+            while (matcher.find()) {
+                group = matcher.group(1);
+                System.out.println("group: " + group);
+                Pattern subPattern = Pattern.compile(left + "(.+)" + operator + "(.+)" + right);
+                Matcher subMatcher = subPattern.matcher(group);
+                if (subMatcher.find()) {
+                    String newGroup;
+                    String equivalence;
+                    if (operator.equals("\\^")) 
+                        equivalence  = "!{1}v!{2}";
+                    else
+                        equivalence = "!{1}^!{2}";
+                    
+                    newGroup = equivalence.replace("{1}", subMatcher.group(1));
+                    newGroup = newGroup.replace("{2}", subMatcher.group(2));
+                    groupedInput = groupedInput.replace(group,newGroup);
+                    
+                }                
+            }
+        }
+        return groupedInput;
     }
     /* Returns list of all operators used in a particular expression. */
     public static ArrayList<String> findOperators(String input) {
         ArrayList<String> inputOperators = new ArrayList<>();
+        // check for ! first
+        if (input.matches(".*!.*"))
+            inputOperators.add("!");
+        // now check all binary operators
         for (String operator : operators) {
             if (input.matches(".*\\w+" + operator + "\\w+.*"))
                 inputOperators.add(operator);         
@@ -177,6 +210,7 @@ public class ConvertToCNF {
    /* Groups expression according to precedence, wrapping parentheses around a group. */
     public static String groupByOperator(String input, ArrayList<String> inputOperators) {     
         ArrayList<String> otherOperators;
+        inputOperators.remove("!");
         for (String operator : inputOperators) {
             otherOperators = (ArrayList<String>)inputOperators.clone();
             if (operator.equals("\\^") || operator.equals("v")) {
@@ -193,7 +227,7 @@ public class ConvertToCNF {
                 j = scanBackwards(j,input,otherOperators);
                 k = scanForwards(k,input,otherOperators);
                 // if brackets would group the entire expression, or there are already brackets there
-                if (input.charAt(j) == '(' && input.charAt(k-1) == ')')
+                if ((input.charAt(j) == '(' || input.charAt(j) == '!' ) && input.charAt(k-1) == ')')
                     continue;
                 else if (j == 0 && k >= input.length()-1)
                     input = "(" + input + ")";
@@ -238,7 +272,7 @@ public class ConvertToCNF {
         addEquivalences();
         populateOperatorList();
         ArrayList<String> input = null;
-        String formula = "a->b->c";
+        String formula = "!(A->B)vC";
         /*
         try {
             input = TextFile.readFile();
