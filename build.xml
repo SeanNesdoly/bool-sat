@@ -4,7 +4,7 @@
     <property name="src.dir"     location="src/boolsat" />
     <property name="build.dir"   location="build"/>
     <property name="classes.dir" location="${build.dir}/classes"/>
-    <property name="jar.dir"     location="${build.dir}/jar"/>
+    <property name="jar.dir"     location="${build.dir}"/>
 
     <property name="main-class"  value="boolsat.Main"/>
 
@@ -14,7 +14,9 @@
 
     <target name="compile">
         <mkdir dir="${classes.dir}"/>
-        <javac srcdir="${src.dir}" destdir="${classes.dir}" />
+        <javac srcdir="${src.dir}" destdir="${classes.dir}" includeantruntime="false">
+            <compilerarg value="-g" />
+        </javac>
     </target>
 
     <target name="jar" depends="compile">
