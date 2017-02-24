@@ -39,7 +39,6 @@ public class ConvertToCNF {
         return clauseForm;
     }
     
-    
     /* Takes grouped expression and converts it to CNF based on equivalence rules. */
     public static String convertToCNF(String groupedInput) {
         while (groupedInput.matches(".+<->.+")) {
@@ -86,10 +85,11 @@ public class ConvertToCNF {
                     if (operator.equals("<->")) 
                         equivalence  = "({1}->{2})^({2}->{1})";
                     else
-                        equivalence = "(!{1}v{2})";
+                        equivalence = "!{1}v{2}";
                     newGroup = equivalence.replace("{1}", subMatcher.group(1));
                     newGroup = newGroup.replace("{2}", subMatcher.group(2));
                     groupedInput = groupedInput.replace(group,newGroup);  
+                    System.out.println(groupedInput);
                 }                
             }
         }
@@ -315,6 +315,11 @@ public class ConvertToCNF {
             formula = convertToCNF(formula);
         }
         System.out.println("result: " + formula);
+        inputOperators = findOperators(formula);
+        if (inputOperators.contains("!"))
+            inputOperators.remove("!");
+        if (inputOperators.size() == 1 && inputOperators.contains("v"))
+            formula = "(" + formula + ")";
         String clauseForm = writeInClauseForm(formula);
         System.out.println("Clause form: " + clauseForm);  
     }
@@ -323,7 +328,7 @@ public class ConvertToCNF {
     public static void main(String[] args) {
         populateOperatorList();
         ArrayList<String> input = null;
-        String formula = "A<->B";
+        String formula = "A->B->C";
         /*
         try {
             input = TextFile.readFile();
