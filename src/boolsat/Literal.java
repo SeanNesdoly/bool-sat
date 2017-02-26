@@ -11,7 +11,7 @@ package boolsat;
 public class Literal {
     String s; // symbol of literal
     boolean sign; // sign of literal; true=a positive literal, false=a negative literal
-    boolean val; // the value actually assigned to the symbol (!A where A has value true is false)
+    boolean val; // the value actually assigned to the symbol (!A where A has *value* true is evaluated to false)
     boolean isAssigned; // flag for this literal being assigned in the DPLL algorithm
 
     // parse out a Literal from a String
@@ -60,6 +60,7 @@ public class Literal {
 
     public void setLiteralTrue() {
         this.isAssigned = true;
+        
         if (sign)
             val = true; // A is set true to evaluate to true
         else
@@ -68,6 +69,10 @@ public class Literal {
 
     // compute the value of the literal with consideration of its sign
     public boolean computeValue() {
+        // literals that have not been assigned default to false
+        if (!isAssigned)
+            return false;
+
         if (sign) // positive literal
             return val;
         else // negative literal
