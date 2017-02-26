@@ -39,6 +39,7 @@ public class Main {
                     // TODO: parse formulas into clausal CNF from Mary
                 }
                 // handle final statement of the form "Therefore, A."
+                // TODO: negate this statement for proof by refutation!
                 String conclusion = formulas.get(formulas.size()-1);
                 conclusion = conclusion.substring(12, conclusion.length());*/
 
@@ -47,21 +48,18 @@ public class Main {
                 System.out.println(cnf.formula); // raw string
                 System.out.println(cnf);
 
-
-                /*for (Literal lit:cnf.allLiterals)
-                    System.out.println("~" + lit);*/
-
-                /*ArrayList<DPLL.Clause> all_unit_clauses = formula.find_all_unit_clauses();
-                for (DPLL.Clause unit_clause : all_unit_clauses) {
-                    formula = DPLL.unit_propagate(unit_clause.toLiteral(), formula);
-                    System.out.println(formula);
-                }*/
-
-                DPLL d = new DPLL();
-                boolean satisfiable = d.dpll(cnf);
+                //DPLL d = new DPLL();
+                boolean satisfiable = DPLL.dpll(cnf);
+                if (satisfiable)
+                    System.out.println("SATISFIABLE");
+                else
+                    System.out.println("UNSATISFIABLE");
 
                 // write the computed satisfiability of the problem instance to file
-                TextFile.writeFile(DPLL.SAT);
+                if (satisfiable)
+                    TextFile.writeFile(DPLL.SAT);
+                else
+                    TextFile.writeFile(DPLL.UNSAT);
             } catch (IOException ex) {
                 System.err.println(ex.getMessage());
                 return;

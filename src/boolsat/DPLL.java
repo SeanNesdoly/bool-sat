@@ -11,6 +11,8 @@ package boolsat;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Set;
+import java.util.List;
 
 public class DPLL {
 
@@ -23,110 +25,76 @@ public class DPLL {
         return dpll(F);
     }
 
-    public boolean dpll(CNF F) {
-        System.out.println("running dpll");
+    public static boolean dpll(CNF F) {
+        System.out.println("running dpll on " + F);
+
+        /*Set<Literal> lits = F.literalMap.keySet();
+        Literal[] litsArr = lits.toArray(new Literal[0]);
+        for (int j = 0; j < litsArr.length; j++) {
+            List<Integer> cIndeces = F.literalMap.get(litsArr[j]);
+
+            for (Iterator<Integer> i = cIndeces.iterator(); i.hasNext();) {
+                System.out.println("" + litsArr[j] + ": " + i.next());
+            }
+        }*/
+
         // if every clause in F is true, return true
         boolean satisfiable = true;
         for(Iterator<Clause> i = F.clauses.iterator(); i.hasNext();) {
             Clause c = i.next();
 
-            if (!c.value) {
+            if (!c.isClauseTrue()) {
+                System.out.println(c + " is false");
                 satisfiable = false; // found a false clause
                 break;
             }
         }
 
-        if (satisfiable) // all clauses in F are true
+        if (satisfiable) { // all clauses in F are true
+            System.out.println(F + " is satisfiable");
             return true;
+        }
 
         System.out.println("checking for empty clause");
         if (F.containsEmptyClause()) // some clause is false in the model
             return false;
 
-        System.out.println("eliminating pure literals");
+        System.out.println("eliminating pure literals, F before = " + F);
         F.eliminate_pure_literals();
 
-        System.out.println(F);
+        System.out.println("F after = " + F);
 
         System.out.println("handling unit clauses");
-        ArrayList<Literal> unit_clauses = F.find_all_unit_clauses();
+        /*ArrayList<Literal> unit_clauses = F.find_all_unit_clauses();
         for (int i = 0; i < unit_clauses.size(); i++) {
             F.unit_propagate(unit_clauses.get(i));
-        }
-        // simplify formula by handling unit clauses
-        /*Literal unit_clause = F.find_unit_clause();
-        while (unit_clause != null) {
-            F.unit_propagate(unit_clause);
-
-            unit_clause = F.find_unit_clause();
         }*/
 
-        System.out.println("choosing a literal");
+        // simplify formula by handling unit clauses
+        Clause unit_clause = F.find_unit_clause();
+        while (unit_clause != null) {
+            F.unit_propagate(unit_clause.toLiteral());
+            unit_clause.literals.get(0).setLiteralTrue();
+            System.out.println("unit_propagate: " + F);
+
+            unit_clause = F.find_unit_clause();
+        }
+        System.out.println("after unit propagation: " + F);
+
         Literal l = F.choose_literal();
+        System.out.println("literal chosen: " + l);
         Literal negatedL = l.createNegatedLiteral();
 
         CNF F1 = new CNF(F);
         CNF F2 = new CNF(F);
 
-        System.out.println("assigning literal values");
         if (l != null) {
             F1.setAllLiteralInstancesTrue(l);
             F2.setAllLiteralInstancesTrue(negatedL);
         }
 
-        System.out.println("recursive calls");
+        System.out.println("assigning literal values & recursive calls");
         return dpll(F1) || dpll(F2);
     }
-
-
-
-/*
-    public static void main(String[] args) {
-
-        ArrayList<String> formulas = null;
-        try {
-            formulas = TextFile.readFile();
-            //System.out.println(formulas.get(0));
-
-            // TODO: parse formulas into clausal CNF from Mary
-
-            CNF cnf = new DPLL().new CNF(formulas.get(0));
-            System.out.println(cnf.formula);
-            System.out.println(cnf);
-
-            //for (Literal lit:cnf.allLiterals)
-            //    System.out.println("~" + lit);
-
-
-            ArrayList<Clause> all_unit_clauses = cnf.find_all_unit_clauses();
-            for (Clause unit_clause : all_unit_clauses) {
-                cnf = unit_propagate(unit_clause.toLiteral(), cnf);
-                System.out.println(cnf);
-            }
-
-
-            while (c != null) {
-                System.out.println("unit_clause: " + c);
-                cnf = unit_propagate(c.toLiteral(), cnf);
-
-                c = cnf.find_all_unit_clauses();
-            }
-
-            cnf = unit_propagate(c.toLiteral(), cnf);
-            System.out.println(cnf);
-
-            //c = cnf.find_unit_clause();
-
-            cnf = unit_propagate(c.toLiteral(), cnf);
-            System.out.println(cnf);
-
-
-            TextFile.writeFile(SAT);
-        } catch (IOException ex) {
-            System.err.println(ex.getMessage());
-            return;
-        }
-
-    }*/
 
  }
