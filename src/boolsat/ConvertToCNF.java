@@ -117,9 +117,10 @@ public class ConvertToCNF {
             if (matcher.find()) {
                 int opStartIndex = matcher.start();
                 int opEndIndex = matcher.end();
-                int groupStartIndex = scanBackwards(opStartIndex,groupedInput,otherOperators);
-                if (groupStartIndex == 1)
+                int groupStartIndex = modifiedScanBackwards(opStartIndex,groupedInput,otherOperators);
+                if (groupStartIndex == 1 && groupedInput.charAt(0) == '!')
                     groupStartIndex = 0;
+                System.out.println("start: " + groupStartIndex);
                 group1 = groupedInput.substring(groupStartIndex,opStartIndex);
                 int groupEndIndex = scanForwards(opEndIndex,groupedInput,otherOperators);
                 if (groupEndIndex == groupedInput.length()-1)
@@ -172,7 +173,7 @@ public class ConvertToCNF {
                     String newGroup;
                     String equivalence;
                     if (operator.equals("\\^")) 
-                        equivalence  = "(!{1}v!{2})";
+                        equivalence  = "!{1}v!{2}";
                     else
                         equivalence = "!{1}^!{2}";
                     
@@ -183,6 +184,16 @@ public class ConvertToCNF {
                 }                
             }
         }
+        groupedInput = regroupFormula(groupedInput);
+        return groupedInput;
+    }
+    
+    public static String regroupFormula(String groupedInput) {
+        ArrayList<String>inputOperators = findOperators(groupedInput);
+        if (inputOperators.contains("!"))
+            inputOperators.remove("!");
+        if (!(inputOperators.size() == 1 && inputOperators.contains("v"))) 
+            groupedInput = groupByOperator(groupedInput,inputOperators);
         return groupedInput;
     }
     
@@ -204,8 +215,6 @@ public class ConvertToCNF {
                 } 
             }
         }
-        ArrayList<String>inputOperators = findOperators(groupedInput);
-        groupedInput = groupByOperator(groupedInput,inputOperators);
         return groupedInput;     
     }
     
@@ -261,7 +270,7 @@ public class ConvertToCNF {
         return inputOperators;
     }
     
-    /* Given an input string and starting index j, scans backward in the string.
+        /* Given an input string and starting index j, scans backward in the string.
     Returns an appropriate position for a left parenthesis to be placed. */
     public static int scanBackwards(int j,String input,ArrayList<String> otherOperators) {
         int rightCount = 0;
@@ -291,6 +300,36 @@ public class ConvertToCNF {
         }
         return j;     
     }
+    
+    /* Given an input string and starting index j, scans backward in the string.
+    Modified to return the starting position of a bracketed group. */
+    public static int modifiedScanBackwards(int j,String input,ArrayList<String> otherOperators) {
+        boolean foundOperator = false;
+        boolean rightParenthesis = false;
+        String literalChar;
+        char character = input.charAt(--j);
+        while (j > 0) {
+            if (character == ')') 
+                rightParenthesis = true;
+            if (character == '(') {
+                if (rightParenthesis)
+                    break;
+            }
+            // if character is part of another operator 
+            for (String operator : otherOperators) {
+                literalChar = Pattern.quote(Character.toString(character));
+                if (operator.matches(".*" + literalChar + ".*"))  {
+                    foundOperator = true;
+                    break;
+                }
+            }
+            if (foundOperator && !rightParenthesis)
+                break;
+            character = input.charAt(--j); // decrement then get char
+        }
+        return j;     
+    }
+    
     
     /* Given an input string and starting index k, scans forward in the string.
     Returns an appropriate position for a right parenthesis to be placed. */
@@ -369,13 +408,31 @@ public class ConvertToCNF {
         return input;
     }
     
+    /* Given an input formula, returns true if expression is already grouped */
+    public static boolean findParentheses(String formula) {
+        boolean foundParenthesis = false;
+        for (int i = 0; i < formula.length(); i++) {
+            if (formula.charAt(i) == '(' || formula.charAt(i) == ')')
+                foundParenthesis = true;
+        }
+        return foundParenthesis;
+    }
+    
     /* Takes a formula and groups it by operator, converts it to CNF, and writes it in clause form. */
     public static void processInput(String formula) {
         ArrayList<String> inputOperators = findOperators(formula); 
-        // if the only operator is '^' or 'v', no grouping is required
-        if (!(inputOperators.size() == 1 && ((inputOperators.contains("\\^") || inputOperators.contains("v"))))) {
-            formula = groupByOperator(formula, inputOperators);
-            formula = convertToCNF(formula);
+        boolean parenthesesPresent = findParentheses(formula);
+        // if there are parentheses present, skip grouping
+        if (parenthesesPresent) {
+            // if the only operator is '^' or 'v', skip grouping
+            if (!(inputOperators.size() == 1 && ((inputOperators.contains("\\^") || inputOperators.contains("v")))))
+                formula = convertToCNF(formula);
+        }
+        else {
+            if (!(inputOperators.size() == 1 && ((inputOperators.contains("\\^") || inputOperators.contains("v"))))) {
+                formula = groupByOperator(formula, inputOperators);
+                formula = convertToCNF(formula);
+            }
         }
         System.out.println("result: " + formula);
         inputOperators = findOperators(formula);
@@ -392,7 +449,7 @@ public class ConvertToCNF {
     public static void main(String[] args) {
         populateOperatorList();
         ArrayList<String> input = null;
-        String formula = "A->B->C";
+        String formula = "(A^B)->C";
         /*
         try {
             input = TextFile.readFile();
