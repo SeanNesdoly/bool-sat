@@ -10,6 +10,7 @@ package boolsat;
  */
 
 import java.util.LinkedList;
+import java.util.Iterator;
 
 public class Clause {
 
@@ -44,9 +45,25 @@ public class Clause {
         return false; // no true literal found
     }
 
-    // determines if this clause is a unit clause (only 1 literal)
+    // Determines if this is a unit clause or not. Note that a unit clause may be a single literal,
+    // or, where 1 literal is not assigned and the rest are assigned false
     public boolean isUnitClause() {
-        return (literals.size() == 1);
+        if (literals.size() == 1)
+            return true;
+
+        // case: one literal is not assigned & the rest are assigned false
+        int trueCount = 0;
+        for (Iterator<Literal> i = this.literals.iterator(); i.hasNext();) {
+            Literal l = i.next();
+
+            if (l.computeValue())
+                trueCount++;
+        }
+
+        if (trueCount != 1)
+            return false;
+
+        return false;
     }
 
     // determines if this clause has no literals
@@ -66,11 +83,12 @@ public class Clause {
 
     // convenience method to print out a clause in clausal form
     public String toString() {
-        //if (this.value)
-        //    return "true";
-
         if (this.isUnitClause())
             return this.toLiteral().toString() + "=" + isClauseTrue();
+
+        if (this.isEmptyClause()) {
+            return "EMPTY";
+        }
 
         String out = "(";
         for (Literal l : literals) {
