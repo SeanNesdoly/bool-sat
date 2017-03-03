@@ -39,6 +39,7 @@ public class ConvertToCNF {
         return clauseForm;
     }
     
+    
     /* Takes grouped expression and converts it to CNF based on equivalence rules. */
     public static String convertToCNF(String groupedInput) {
         while (groupedInput.matches(".+<->.+")) {
@@ -68,11 +69,11 @@ public class ConvertToCNF {
     }   
     
     /* Converts expressions of the form A<->B to (A->B)^(B->A), and expressions of 
-    the form A->B to !AvB */
+    the form A->B to !AvB 
     public static String convertImplicationOrIFF(String groupedInput, String operator) {
         String group;
         while (groupedInput.matches(".+" + operator + ".+")) {
-            Pattern pattern = Pattern.compile("([^"+ nonLiteral + "]+" + operator + "[^"+ nonLiteral + "]+)");
+            Pattern pattern = Pattern.compile("([^"+ opCharacter + "]+" + operator + "[^"+ opCharacter + "]+)");
             Matcher matcher = pattern.matcher(groupedInput);
             while (matcher.find()) {
                 group = matcher.group(1);
@@ -95,6 +96,66 @@ public class ConvertToCNF {
         }
         return groupedInput;   
     }
+    */
+    
+        /* Converts expressions of the form A<->B to (A->B)^(B->A), and expressions of 
+    the form A->B to !AvB */
+    public static String convertImplicationOrIFF(String groupedInput, String operator) {
+        ArrayList<String> otherOperators = findOperators(groupedInput);
+        if (otherOperators.contains("!"))
+            otherOperators.remove("!");
+        String group1;
+        String group2;
+        String equivalence;
+        if (operator.equals("<->")) 
+            equivalence  = "({1}->{2})^({2}->{1})";
+        else
+            equivalence = "!{1}v{2}";
+        while (groupedInput.matches(".+" + operator + ".+")) {
+            Pattern pattern = Pattern.compile(operator);
+            Matcher matcher = pattern.matcher(groupedInput);
+            if (matcher.find()) {
+                int opStartIndex = matcher.start();
+                int opEndIndex = matcher.end();
+                int groupStartIndex = scanBackwards(opStartIndex,groupedInput,otherOperators);
+                if (groupStartIndex == 1)
+                    groupStartIndex = 0;
+                group1 = groupedInput.substring(groupStartIndex,opStartIndex);
+                int groupEndIndex = scanForwards(opEndIndex,groupedInput,otherOperators);
+                if (groupEndIndex == groupedInput.length()-1)
+                    groupEndIndex++;
+                group2 = groupedInput.substring(opEndIndex,groupEndIndex);
+                String subExpression = groupedInput.substring(groupStartIndex,groupEndIndex);
+                System.out.println(subExpression);
+                System.out.println(group1);
+                System.out.println(group2);
+                
+                String newSubExpression = equivalence.replace("{1}", group1);
+                newSubExpression = newSubExpression.replace("{2}", group2);
+                groupedInput = groupedInput.replace(subExpression,newSubExpression);
+                /*
+                group = matcher.group(1);
+                System.out.println("group: " + group);
+                Pattern subPattern = Pattern.compile("(.+)" + operator + "(.+)");
+                Matcher subMatcher = subPattern.matcher(group);
+                if (subMatcher.find()) {
+                    String newGroup;
+                    String equivalence;
+                    if (operator.equals("<->")) 
+                        equivalence  = "({1}->{2})^({2}->{1})";
+                    else
+                        equivalence = "!{1}v{2}";
+                    newGroup = equivalence.replace("{1}", subMatcher.group(1));
+                    newGroup = newGroup.replace("{2}", subMatcher.group(2));
+                    groupedInput = groupedInput.replace(group,newGroup);  
+                    System.out.println(groupedInput);
+                }                
+            }
+                */
+        }
+        }
+        return groupedInput;   
+    }
     
     /* Converts expressions of the form !(A^B) to !Av!B, or !(AvB) to !A^!B */
     public static String distributeNot(String groupedInput, String operator) {
@@ -113,7 +174,7 @@ public class ConvertToCNF {
                     if (operator.equals("\\^")) 
                         equivalence  = "(!{1}v!{2})";
                     else
-                        equivalence = "(!{1}^!{2})";
+                        equivalence = "!{1}^!{2}";
                     
                     newGroup = equivalence.replace("{1}", subMatcher.group(1));
                     newGroup = newGroup.replace("{2}", subMatcher.group(2));
@@ -143,6 +204,8 @@ public class ConvertToCNF {
                 } 
             }
         }
+        ArrayList<String>inputOperators = findOperators(groupedInput);
+        groupedInput = groupByOperator(groupedInput,inputOperators);
         return groupedInput;     
     }
     
@@ -318,8 +381,9 @@ public class ConvertToCNF {
         inputOperators = findOperators(formula);
         if (inputOperators.contains("!"))
             inputOperators.remove("!");
-        if (inputOperators.size() == 1 && inputOperators.contains("v"))
+        if (inputOperators.size() == 1 && inputOperators.contains("v") && formula.charAt(0) != '(')
             formula = "(" + formula + ")";
+        
         String clauseForm = writeInClauseForm(formula);
         System.out.println("Clause form: " + clauseForm);  
     }
