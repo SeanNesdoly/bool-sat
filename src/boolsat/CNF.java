@@ -8,9 +8,6 @@ package boolsat;
  * February 24th, 2017
  */
 
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Set;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.ArrayList;
@@ -19,11 +16,13 @@ import java.util.Iterator;
 public class CNF {
 
     String formula; // CNF formula in clausal form
-    Map<Literal, List<Integer>> literalMap; // the set of all literals in the formula mapped to clauses
+    List<Literal> allLiterals; // the set of all literals in the formula
+    List<Literal> branchLiterals; // store branching literals on recursive descent
     List<Clause> clauses; // the set of clauses in the CNF formula
 
     public CNF(String _cnf) {
-        literalMap = new HashMap<Literal, List<Integer>>();
+        allLiterals = new LinkedList<Literal>();
+        branchLiterals = new LinkedList<Literal>();
         clauses = new LinkedList<Clause>();
         formula = _cnf;
 
@@ -40,15 +39,9 @@ public class CNF {
                 Clause c = new Clause(strLiterals);
                 clauses.add(c);
 
-                // add all literals to the set of literals in this formula, mapped to this clause
-                for (Literal lit : c.literals) {
-                    if (literalMap.containsKey(lit)) {
-                        literalMap.get(lit).add(clauseIndex);
-                    } else {
-                        List<Integer> clauseList = new LinkedList<Integer>();
-                        clauseList.add(clauseIndex);
-                        literalMap.put(lit, clauseList);
-                    }
+                // add all literals to the set of literals in this formula
+                for (Literal l : c.literals) {
+                    allLiterals.add(l);
                 }
 
                 index = endBracket + 1; // update current index in the CNF formula
@@ -65,13 +58,7 @@ public class CNF {
                 Clause c = new Clause(formula.substring(index, endClause));
                 clauses.add(c);
 
-                if (literalMap.containsKey(c.toLiteral())) {
-                    literalMap.get(c.toLiteral()).add(clauseIndex);
-                } else {
-                    List<Integer> clauseList = new LinkedList<Integer>();
-                    clauseList.add(clauseIndex);
-                    literalMap.put(c.literals.get(0), clauseList);
-                }
+                allLiterals.add(c.toLiteral());
 
                 index = endClause + 1; // update current index in the CNF formula
                 clauseIndex++;
@@ -83,43 +70,29 @@ public class CNF {
     // copy constructor
     public CNF(CNF F) {
         this.formula = F.formula;
-        this.literalMap = new HashMap<Literal, List<Integer>>(F.literalMap);
-        this.clauses = new LinkedList<Clause>(F.clauses);
-    }
 
-
-    // look for all non-unit clauses that contain the literal l and remove them,
-    // as there exists an assignment of the literal that makes all clauses containing l
-    // true; additionally, remove from all clauses any instance of the negated literal !l
-    public void unit_propagate2(Literal l) {
-        l.setLiteralTrue();
-        Literal negated_l = l.createNegatedLiteral();
-
-        for(Iterator<Clause> i = this.clauses.iterator(); i.hasNext();) {
-            Clause c = i.next();
-
-            // remove all non-unit clauses containing the literal l
-            if (!c.isUnitClause() && c.literals.contains(l)) {
-                System.out.println("setting clause true: " + c);
-                //i.remove();
-                //c.setClauseTrue();
-                continue;
-            }
-
-            // in every clause that contains the negated literal !l, delete it
-            while (c.literals.contains(negated_l)) {
-                // we are not modifying the actual iterator here so it is a safe operation!
-                c.literals.remove(negated_l);
-                System.out.println("removing literal:" + negated_l);
-
-                // if we have removed all literals from the clause, delete the clause
-                // TODO: is the above correct? an empty clause implies unsatisfiability..
-                if (c.literals.size() == 0) {
-                    i.remove();
-                    System.out.println("removing clause: " + c);
-                }
-            }
+        // copy literals
+        List<Literal> newLiterals = new LinkedList<Literal>();
+        for (Literal l : F.allLiterals) {
+            newLiterals.add(new Literal(l));
         }
+        this.allLiterals = newLiterals;
+
+        // copy branch literals
+        this.branchLiterals = new LinkedList<Literal>();
+        List<Literal> copyBranchLits = new LinkedList<Literal>();
+        for (Literal l : F.branchLiterals) {
+            copyBranchLits.add(new Literal(l));
+        }
+        this.branchLiterals = copyBranchLits;
+
+        // copy clauses
+        this.clauses = new LinkedList<Clause>();
+        List<Clause> newClauses = new LinkedList<Clause>();
+        for (Clause c : F.clauses) {
+            newClauses.add(new Clause(c));
+        }
+        this.clauses = newClauses;
     }
 
 
@@ -127,42 +100,42 @@ public class CNF {
     // as there exists an assignment of the literal that makes all clauses containing l
     // true; additionally, remove from all clauses any instance of the negated literal !l
     public void unit_propagate(Literal l) {
-        l.setLiteralTrue();
-
-        // remove all non-unit clauses containing the literal l
-        for (Iterator<Integer> i = this.literalMap.get(l).iterator(); i.hasNext();) {
-            int cIndex = i.next();
-            Clause c = clauses.get(cIndex);
-
-            if (!c.isUnitClause() && c.literals.contains(l)) {
-                System.out.println("removing clause: " + c);
-                removeClause(c);
-            }
+        // set all literals to true
+        for (Literal other : allLiterals) {
+            if (l.equals(other))
+                other.setLiteralTrue();
         }
+        l.setLiteralTrue();
+        branchLiterals.add(l);
 
-        // in every non-unit clause that contains the negated literal "!l", delete it
         Literal negated_l = l.createNegatedLiteral();
-        if (this.literalMap.containsKey(negated_l)) {
 
-            for (Iterator<Integer> i = this.literalMap.get(negated_l).iterator(); i.hasNext();) {
-                int cIndex = i.next();
-                Clause c = clauses.get(cIndex);
+        for(Iterator<Clause> i = this.clauses.iterator(); i.hasNext();) {
+            Clause c = i.next();
 
-                if (!c.isUnitClause() && c.literals.contains(negated_l)) {
-                    c.literals.remove(negated_l);
-                    i.remove();
-                }
+            // remove all non-unit clauses containing the literal l
+            if (!c.isUnitClause() && c.literals.contains(l)) {
+                System.out.println("\tremoving clause: " + c);
+                for (Literal cLit : c.literals)
+                    allLiterals.remove(cLit);
+
+                i.remove();
+                continue;
             }
 
-            // if we have removed all instances of the negated literal, clean it up
-            if (this.literalMap.get(negated_l).size() == 0)
-                this.literalMap.remove(negated_l);
+            // in every clause that contains the negated literal !l, delete it
+            while (c.literals.contains(negated_l)) {
+                // we are not modifying the actual iterator here so it is a safe operation!
+                c.literals.remove(negated_l);
+                allLiterals.remove(negated_l);
+                System.out.println("\tremoving literal: " + negated_l);
+            }
         }
     }
 
-
-    // find all unit clause instances in the formula; note that a unit clause
-    // is simply a clause that contains only one literal (!A or A)
+    // Find all unit clause instances in the formula.
+    // note that a unit clause may be a clause with one literal (!A or A), or,
+    // a clause with one unassigned literal & the rest assigned as false
     public ArrayList<Literal> find_all_unit_clauses() {
         ArrayList<Literal> unit_clauses = new ArrayList<Literal>();
 
@@ -176,13 +149,14 @@ public class CNF {
         return unit_clauses;
     }
 
-    // if it exists, find the next instance of a unit clause in the CNF formula; note that a unit
-    // clause is simply a clause that contains one literal (!A or A)
+    // If it exists, find the next instance of a unit clause in the CNF formula.
+    // note that a unit clause may be a clause with one literal (!A or A), or,
+    // a clause with one unassigned literal & the rest assigned as false
     public Clause find_unit_clause() {
         for(Iterator<Clause> i = this.clauses.iterator(); i.hasNext();) {
             Clause c = i.next();
 
-            if (c.isUnitClause())
+            if (c.isUnitClause() && !c.isClauseTrue())
                 return c;
         }
 
@@ -191,135 +165,139 @@ public class CNF {
 
     // eliminate all pure literals found in the formula & replace them with TRUE unit clauses
     public void eliminate_pure_literals() {
-        for (Literal l : this.literalMap.keySet()) {
+        for (Literal l : allLiterals) {
 
-            if (l.isAssigned) // do not look at literals in TRUE clauses
+            if (l.computeValue()) // do not look at satisfied literals
                 continue;
 
-            // if we find an instance of the negated literal, l is NOT pure
+            // l is NOT pure if we find an instance of the negated literal
             Literal negated_l = l.createNegatedLiteral();
-            boolean pure = !this.literalMap.containsKey(negated_l);
+            boolean pure = !allLiterals.contains(negated_l);
 
-            // remove all instances of the pure literal and add it in as a TRUE unit clause
+            // remove all instances of the pure literal & add it back in as a true unit clause
             if (pure) {
-                removeLiteral(l); // TODO: if we have removed all literals from a non-unit clause, remove the clause?
+                for(Iterator<Clause> i = this.clauses.iterator(); i.hasNext();) {
+                    Clause c = i.next();
 
-                l.setLiteralTrue();
-                Clause c = new Clause(l);
-
-                // update data structures
-                this.clauses.add(c);
-                List<Integer> cIndexList = new LinkedList<Integer>();
-                cIndexList.add(clauses.size() - 1);
-                this.literalMap.put(l, cIndexList);
-            }
-        }
-    }
-
-    // safely removes a clause in the formula
-    public void removeClause(Clause c) {
-        int cIndex = this.clauses.indexOf(c);
-
-        if (cIndex != -1) {
-            System.out.println("removing clause: " + c);
-
-            this.clauses.remove(c); // remove clause from the set of clauses
-
-            // update map data structure
-            Map<Literal, List<Integer>> newLiteralMap = new HashMap<Literal, List<Integer>>();
-            int clauseCount = 0;
-            for (Iterator<Clause> i = this.clauses.iterator(); i.hasNext();) {
-                Clause aClause = i.next();
-
-                for (Literal lit : aClause.literals) {
-                    if (newLiteralMap.containsKey(lit)) {
-                        newLiteralMap.get(lit).add(clauseCount);
-                    } else {
-                        List<Integer> clauseList = new LinkedList<Integer>();
-                        clauseList.add(clauseCount);
-                        newLiteralMap.put(lit, clauseList);
+                    if (c.literals.contains(l)) {
+                        c.literals.remove(l);
+                        allLiterals.remove(l);
                     }
                 }
 
-                clauseCount++;
+                l.setLiteralTrue();
+                branchLiterals.add(l);
             }
-
-            /* old way
-            for (Iterator<Literal> i = c.literals.iterator(); i.hasNext();) {
-                literalMap.get(i.next()).remove(cIndex);
-            }*/
         }
     }
 
-    // removes all instances of a literal from the formula
-    public void removeLiteral(Literal l) {
-        List<Integer> clauseList = this.literalMap.get(l);
-        if (clauseList != null) {
-            for (Iterator<Integer> i = clauseList.iterator(); i.hasNext();) {
-                int cIndex = i.next();
-                Clause c = clauses.get(cIndex);
-
-                if (c.isUnitClause()) {
-                    clauses.remove(cIndex); // remove the entire unit clause
-                } else {
-                    c.literals.remove(l); // remove the literal from the clause
-                }
-            }
-
-            literalMap.remove(l);
-            System.out.println("removing literal: " + l);
-        }
-    }
-
-    // selects the next literal in the set of literals contained in this CNF formula
-    // TODO: apply heuristic here?
+    // Selects the next literal in the set of literals contained in this CNF formula
+    // that has not yet been assigned a value
     public Literal choose_literal() {
-        // from the key set, select a literal
-        Set<Literal> setOfLiterals = this.literalMap.keySet();
-        Literal[] arrayOfLiterals = setOfLiterals.toArray(new Literal[0]);
+        for (Iterator<Literal> i = allLiterals.iterator(); i.hasNext();) {
+            Literal l = i.next();
 
-        return (arrayOfLiterals.length != 0 ? arrayOfLiterals[0] : null);
+            if (!l.isAssigned) {
+                //branchLiterals.add(l);
+                return l;
+            }
+        }
+
+        return null;
     }
 
-    // set all instances of the literal l to "true"
+    // Set all instances of the literal l to "true" in the CNF formula.
+    // note: this means all literals l AND !l are assigned a value of true, without
+    // consideration of the sign. Thus, !l will evaluate to false, and l will evaluate to true
     public void setAllLiteralInstancesTrue(Literal l) {
+        System.out.println("setting all instances true: " + l);
+        // set all literals to true
+        for (Literal other : allLiterals) {
+            if (l.equals(other)) {
+                other.setLiteralTrue();
+            }
+        }
         l.setLiteralTrue();
+        branchLiterals.add(l);
 
-        /*if (this.literalMap.containsKey(l)) {
-            List<Integer> clauseList = this.literalMap.get(l);
+        Literal negated_l = l.createNegatedLiteral();
 
-            for (Iterator<Integer> i = clauseList.iterator(); i.hasNext();) {
-                int cIndex = i.next();
-                Clause c = this.clauses.get(cIndex);
+        for(Iterator<Clause> i = this.clauses.iterator(); i.hasNext();) {
+            Clause c = i.next();
 
-                if (c.isUnitClause())
-                    c.setClauseTrue();
-
-                int j = c.literals.indexOf(l);
-                c.literals.get(j).setLiteralTrue();
-            }
-
-
-            for(Iterator<Clause> i = this.clauses.iterator(); i.hasNext();) {
-                Clause c = i.next();
-
-                if (c.literals.contains(l)) {
-                    int j = c.literals.indexOf(l);
-                    c.literals.get(j).setLiteralTrue();
+            if (!c.isUnitClause() && c.literals.contains(l)) {
+                for (Literal cLit : c.literals) {
+                    allLiterals.remove(cLit);
                 }
+
+                System.out.println("\tremoving clause: " + c);
+                i.remove();
+                continue;
             }
-        }*/
+
+            // in every clause that contains the negated literal !l, delete it
+            while (c.literals.contains(negated_l)) {
+                c.literals.remove(negated_l);
+                allLiterals.remove(negated_l);
+                System.out.println("\tremoving literal: " + negated_l);
+            }
+        }
     }
 
-    // returns whether or not this CNF formula contains an empty clause
+    // Set all instances of the literal l to "true" in the CNF formula.
+    // note: this means all literals l AND !l are assigned a value of true, without
+    // consideration of the sign. Thus, !l will evaluate to false, and l will evaluate to true
+    public void setAllLiteralInstancesTrue2(Literal l) {
+        String symbol = l.s;
+        for (Iterator<Literal> i = allLiterals.iterator(); i.hasNext();) {
+            Literal other = i.next();
+
+            if (symbol.equals(other.s)) {
+                other.val = true;
+                other.isAssigned = true;
+            }
+        }
+
+
+    }
+
+    // Set all instances of the literal l to "false" in the CNF formula.
+    // note: this means all literals l AND !l are assigned a value of false, without
+    // consideration of the sign. Thus, !l will evaluate to true, and l will evaluate to false
+    public void setAllLiteralInstancesFalse2(Literal l) {
+        String symbol = l.s;
+        for (Iterator<Literal> i = allLiterals.iterator(); i.hasNext();) {
+            Literal other = i.next();
+
+            if (symbol.equals(other.s)) {
+                other.val = false;
+                other.isAssigned = true;
+            }
+        }
+    }
+
+    // Set all instances of the literal l to "true" in the CNF formula.
+    public void setAllLiteralInstancesTrue3(Literal l) {
+        for (Iterator<Literal> i = allLiterals.iterator(); i.hasNext();) {
+            Literal other = i.next();
+
+            if (l.equals(other)) {
+                other.setLiteralTrue();
+            }
+        }
+    }
+
+    // Returns whether or not this CNF formula contains an empty clause
     public boolean containsEmptyClause() {
         for(Iterator<Clause> i = this.clauses.iterator(); i.hasNext();) {
             Clause c = i.next();
-            if (c.isEmptyClause())
+            if (c.isEmptyClause()) {
+                System.out.println("empty clause found: " + c);
                 return true;
+            }
         }
 
-        return false; // we did not find an empty clause
+        return false; // no empty clause found
     }
 
     // convenience method to print out a CNF formula in clausal form
@@ -331,4 +309,5 @@ public class CNF {
 
         return out.substring(0, out.length()-1) + "}";
     }
+
 }
