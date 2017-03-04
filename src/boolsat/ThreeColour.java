@@ -9,9 +9,7 @@
  * Sean Nesdoly & Mary Hoekstra
  * February 16th, 2017
 */
-//package threecolour;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -48,10 +46,10 @@ public class ThreeColour {
     public static ArrayList<String> createVertexClauses(Set<String> vertices) {
         ArrayList<String> clauseList = new ArrayList<>();
         for (String vertex : vertices) {
-            clauseList.add(vertex + "Rv" + vertex + "Gv" + vertex + "B");
-            clauseList.add("!" + vertex + "Rv!" + vertex + "G");
-            clauseList.add("!" + vertex + "Gv!" + vertex + "B");
-            clauseList.add("!" + vertex + "Bv!" + vertex + "R");
+            clauseList.add("(" + vertex + "R," + vertex + "G," + vertex + "B)");
+            clauseList.add("(!" + vertex + "R,!" + vertex + "G)");
+            clauseList.add("(!" + vertex + "G,!" + vertex + "B)");
+            clauseList.add("(!" + vertex + "B,!" + vertex + "R)");
         }
         return clauseList;
     }
@@ -59,17 +57,38 @@ public class ThreeColour {
         /* For each vertex, creates 4 clauses imposing colouring constraints. */
     public static ArrayList<String> createEdgeClauses(Set<String> edgeList) {
         ArrayList<String> clauseList = new ArrayList<>();
+        String vertex1;
+        String vertex2;
         for (String edge : edgeList) {
-
+            
+            clauseList.add("(!" + vertex1 + "R,!" + vertex2 + "R)");
+            clauseList.add("(!" + vertex1 + "G,!" + vertex2 + "G)");
+            clauseList.add("(!" + vertex1 + "B,!" + vertex2 + "B)");
         }
         return clauseList;
+    }
+    
+    public static String joinClauses(ArrayList<String> vertexClauses, ArrayList<String> edgeClauses) {
+        String expression = "";
+        for (String clause : vertexClauses) {
+            expression = expression + clause + ",";
+        }
+        for (String clause : edgeClauses) {
+            expression = expression + clause + ",";
+        }
+        expression = "{" + expression.substring(0,expression.length()-1) + "}";
+        return expression;     
     }
     
     public static void main(String[] args) {
         String input = "{(A,B),(A,C),(A,D),(B,C),(B,D),(C,D)}";
         Set<String> vertices = createVertexSet(input);
+        //get edges
         ArrayList<String> edges = createEdgeList(input);
-        ArrayList<String> clauseList = createVertexClauses(vertices);
+        ArrayList<String> vertexClauseList = createVertexClauses(vertices);
+        ArrayList<String> edgeClauseList = createEdgeClauses(edges);
+        String clauses = joinClauses(vertexClauseList,edgeClauseList);
+        
 
     }
     
