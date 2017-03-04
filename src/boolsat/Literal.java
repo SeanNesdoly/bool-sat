@@ -36,6 +36,19 @@ public class Literal {
         isAssigned = false;
     }
 
+    // copy constructor
+    public Literal(Literal other) {
+        this.s = other.s;
+        this.sign = other.sign;
+
+        if (other.isAssigned) {
+            this.val = other.val;
+            this.isAssigned = true;
+        } else {
+            this.isAssigned = false;
+        }
+    }
+
     // equivalency is defined on the following attributes: symbol s && sign of literal
     @Override public boolean equals(Object other) {
         if (this == other) return true;
@@ -44,7 +57,6 @@ public class Literal {
 
         Literal otherLit = (Literal)other;
 
-        // TODO: may require comparison of val/isAssigned
         return (s.equals(otherLit.s) && sign == otherLit.sign);
     }
 
@@ -58,9 +70,10 @@ public class Literal {
         return result;
     }
 
+    // sets the value of the literal such that it evaluates to "true" when considering its sign
     public void setLiteralTrue() {
         this.isAssigned = true;
-        
+
         if (sign)
             val = true; // A is set true to evaluate to true
         else
