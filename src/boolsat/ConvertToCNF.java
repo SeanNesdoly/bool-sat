@@ -4,12 +4,11 @@
  *
  * CISC 352 Assignment 2
  * Sean Nesdoly & Mary Hoekstra
- * February 11th, 2017
+ * February 11th, 2017.
+ * Last Modified: March 3rd, 2017.
  * 
 */
-package converttocnf;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -38,8 +37,7 @@ public class ConvertToCNF {
         clauseForm = "{" + clauseForm + "}";
         return clauseForm;
     }
-    
-    
+   
     /* Takes grouped expression and converts it to CNF based on equivalence rules. */
     public static String convertToCNF(String groupedInput) {
         while (groupedInput.matches(".+<->.+")) {
@@ -90,17 +88,12 @@ public class ConvertToCNF {
                 int groupStartIndex = modifiedScanBackwards(opStartIndex,groupedInput,otherOperators);
                 if (groupStartIndex == 1 && groupedInput.charAt(0) == '!')
                     groupStartIndex = 0;
-                System.out.println("start: " + groupStartIndex);
                 group1 = groupedInput.substring(groupStartIndex,opStartIndex);
                 int groupEndIndex = scanForwards(opEndIndex,groupedInput,otherOperators);
                 if (groupEndIndex == groupedInput.length()-1)
                     groupEndIndex++;
                 group2 = groupedInput.substring(opEndIndex,groupEndIndex);
-                String subExpression = groupedInput.substring(groupStartIndex,groupEndIndex);
-                System.out.println(subExpression);
-                System.out.println(group1);
-                System.out.println(group2);
-                
+                String subExpression = groupedInput.substring(groupStartIndex,groupEndIndex);   
                 String newSubExpression = equivalence.replace("{1}", group1);
                 newSubExpression = newSubExpression.replace("{2}", group2);
                 groupedInput = groupedInput.replace(subExpression,newSubExpression);
@@ -126,12 +119,10 @@ public class ConvertToCNF {
                     if (operator.equals("\\^")) 
                         equivalence  = "!{1}v!{2}";
                     else
-                        equivalence = "!{1}^!{2}";
-                    
+                        equivalence = "!{1}^!{2}";   
                     newGroup = equivalence.replace("{1}", subMatcher.group(1));
                     newGroup = newGroup.replace("{2}", subMatcher.group(2));
-                    groupedInput = groupedInput.replace(group,newGroup);
-                    
+                    groupedInput = groupedInput.replace(group,newGroup);         
                 }                
             }
         }
@@ -353,7 +344,7 @@ public class ConvertToCNF {
                     input = input.substring(0,k+1) + ")" + input.substring(k+1);         
                 }
                 bracketCount = bracketCount + 2;
-                System.out.println(input);
+                System.out.println("Grouped input: " + input);
              }  
          } 
         return input;
@@ -387,13 +378,12 @@ public class ConvertToCNF {
                 formula = convertToCNF(formula);
             }
         }
-        System.out.println("result: " + formula);
+        System.out.println("Result: " + formula);
         inputOperators = findOperators(formula);
         if (inputOperators.contains("!"))
             inputOperators.remove("!");
         if (inputOperators.size() == 1 && inputOperators.contains("v") && formula.charAt(0) != '(')
             formula = "(" + formula + ")";
-        
         String clauseForm = writeInClauseForm(formula);
         System.out.println("Clause form: " + clauseForm);  
         return clauseForm;
@@ -403,7 +393,7 @@ public class ConvertToCNF {
     public static void main(String[] args) {
         
         ArrayList<String> input = null;
-        String formula = "A^BvC";
+        String formula = "!!A^!!B";
         formula = processInput(formula);
      
         }
