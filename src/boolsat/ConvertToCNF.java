@@ -68,36 +68,6 @@ public class ConvertToCNF {
         return groupedInput;
     }   
     
-    /* Converts expressions of the form A<->B to (A->B)^(B->A), and expressions of 
-    the form A->B to !AvB 
-    public static String convertImplicationOrIFF(String groupedInput, String operator) {
-        String group;
-        while (groupedInput.matches(".+" + operator + ".+")) {
-            Pattern pattern = Pattern.compile("([^"+ opCharacter + "]+" + operator + "[^"+ opCharacter + "]+)");
-            Matcher matcher = pattern.matcher(groupedInput);
-            while (matcher.find()) {
-                group = matcher.group(1);
-                System.out.println("group: " + group);
-                Pattern subPattern = Pattern.compile("(.+)" + operator + "(.+)");
-                Matcher subMatcher = subPattern.matcher(group);
-                if (subMatcher.find()) {
-                    String newGroup;
-                    String equivalence;
-                    if (operator.equals("<->")) 
-                        equivalence  = "({1}->{2})^({2}->{1})";
-                    else
-                        equivalence = "!{1}v{2}";
-                    newGroup = equivalence.replace("{1}", subMatcher.group(1));
-                    newGroup = newGroup.replace("{2}", subMatcher.group(2));
-                    groupedInput = groupedInput.replace(group,newGroup);  
-                    System.out.println(groupedInput);
-                }                
-            }
-        }
-        return groupedInput;   
-    }
-    */
-    
         /* Converts expressions of the form A<->B to (A->B)^(B->A), and expressions of 
     the form A->B to !AvB */
     public static String convertImplicationOrIFF(String groupedInput, String operator) {
@@ -134,26 +104,7 @@ public class ConvertToCNF {
                 String newSubExpression = equivalence.replace("{1}", group1);
                 newSubExpression = newSubExpression.replace("{2}", group2);
                 groupedInput = groupedInput.replace(subExpression,newSubExpression);
-                /*
-                group = matcher.group(1);
-                System.out.println("group: " + group);
-                Pattern subPattern = Pattern.compile("(.+)" + operator + "(.+)");
-                Matcher subMatcher = subPattern.matcher(group);
-                if (subMatcher.find()) {
-                    String newGroup;
-                    String equivalence;
-                    if (operator.equals("<->")) 
-                        equivalence  = "({1}->{2})^({2}->{1})";
-                    else
-                        equivalence = "!{1}v{2}";
-                    newGroup = equivalence.replace("{1}", subMatcher.group(1));
-                    newGroup = newGroup.replace("{2}", subMatcher.group(2));
-                    groupedInput = groupedInput.replace(group,newGroup);  
-                    System.out.println(groupedInput);
-                }                
             }
-                */
-        }
         }
         return groupedInput;   
     }
@@ -419,7 +370,9 @@ public class ConvertToCNF {
     }
     
     /* Takes a formula and groups it by operator, converts it to CNF, and writes it in clause form. */
-    public static void processInput(String formula) {
+    public static String processInput(String formula) {
+        populateOperatorList();
+        formula = formula.replaceAll("\\s+",""); // get rid of any whitespace
         ArrayList<String> inputOperators = findOperators(formula); 
         boolean parenthesesPresent = findParentheses(formula);
         // if there are parentheses present, skip grouping
@@ -443,27 +396,15 @@ public class ConvertToCNF {
         
         String clauseForm = writeInClauseForm(formula);
         System.out.println("Clause form: " + clauseForm);  
+        return clauseForm;
     }
     
     /* Populates array lists and preps input for parsing. */
     public static void main(String[] args) {
-        populateOperatorList();
+        
         ArrayList<String> input = null;
-        String formula = "(A^B)->C";
-        /*
-        try {
-            input = TextFile.readFile();
-            formula = input.get(0);
-            System.out.println(formula);
-            TextFile.writeFile("bud");
-        }
-        catch (IOException ex) {
-            System.err.println(ex.getMessage());
-            return; 
-        }
-*/
-        formula = formula.replaceAll("\\s+",""); // get rid of any whitespace
-        processInput(formula);
+        String formula = "A^BvC";
+        formula = processInput(formula);
      
         }
     }
