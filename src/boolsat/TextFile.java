@@ -5,10 +5,6 @@ package boolsat;
  * within this class are static, and thus it should not be instantiated as an
  * object.
  *
- * TODO: ?Specifically, this class is tailored to reading formulae from propositional
- * logic; these are then be converted into CNF. A further adaptation exists to
- * read in a set of edges from a graph for use in the Three-colouring problem.
- *
  * CISC 352 Assignment 2
  * Sean Nesdoly & Mary Hoekstra
  * February 11th, 2017

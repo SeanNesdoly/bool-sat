@@ -78,7 +78,7 @@ public class DPLL {
                         assignments.add(l);
 
                     // UNCOMMENT the following to produce all solutions!
-                    System.out.println("\t" + l + "=" + l.computeValue() + "\t\tval=" + l.val + "\tbAssigned=" + l.isAssigned);
+                    //System.out.println("\t" + l + "=" + l.computeValue() + "\t\tval=" + l.val + "\tbAssigned=" + l.isAssigned);
                 }
             }
 
