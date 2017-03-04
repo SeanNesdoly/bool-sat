@@ -63,6 +63,7 @@ public class ThreeColour {
         return clauseList;
     }
 
+  /* Takes two lists of clauses and joins them into one string in clause form. */
     public static String joinClauses(ArrayList<String> vertexClauses, ArrayList<String> edgeClauses) {
         String expression = "";
         for (String clause : vertexClauses) {
@@ -75,6 +76,8 @@ public class ThreeColour {
         return expression;
     }
 
+    /* Creates a set of vertices and list of edges using CNF object, creates and
+    joins the appropriate clauses, then passes the expression to the DPLL solver. */
     public boolean colour(String input) {
         CNF edges = new CNF(input);
 
