@@ -76,8 +76,13 @@ public class ThreeColour {
     }
 
     public boolean colour(String input) {
-        Set<String> vertices = createVertexSet(input);
         CNF edges = new CNF(input);
+
+        Set<String> vertices = new LinkedHashSet<>();
+        for (Literal l : edges.allLiterals) {
+            vertices.add(l.toString());
+        }
+
         ArrayList<String> vertexClauseList = createVertexClauses(vertices);
         ArrayList<String> edgeClauseList = createEdgeClauses(edges);
         String clauses = joinClauses(vertexClauseList,edgeClauseList);
