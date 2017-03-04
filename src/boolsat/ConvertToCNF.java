@@ -1,3 +1,5 @@
+package boolsat;
+
 /*
  * ConvertToCNF takes an input formula, converts it to Conjunctive Normal Form,
  * and returns it in clause form.
@@ -6,7 +8,7 @@
  * Sean Nesdoly & Mary Hoekstra
  * February 11th, 2017.
  * Last Modified: March 3rd, 2017.
- * 
+ *
 */
 
 import java.util.ArrayList;
@@ -14,21 +16,21 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ConvertToCNF {
-    
+
     private static ArrayList<String> operators = new ArrayList<>();
     private static String opCharacter = Pattern.quote("^v<->");
     private static String nonLiteral = Pattern.quote("^v<-()");
     private static String left = Pattern.quote("(");
     private static String right = Pattern.quote(")");
-    
-    
+
+
     public static void populateOperatorList() {
         operators.add("\\^");
         operators.add("v");
         operators.add("->");
         operators.add("<->");
     }
- 
+
     /* Takes input in CNF and converts it into clause form. */
     public static String writeInClauseForm(String convertedInput) {
         String clauseForm;
@@ -37,7 +39,7 @@ public class ConvertToCNF {
         clauseForm = "{" + clauseForm + "}";
         return clauseForm;
     }
-   
+
     /* Takes grouped expression and converts it to CNF based on equivalence rules. */
     public static String convertToCNF(String groupedInput) {
         while (groupedInput.matches(".+<->.+")) {
@@ -62,11 +64,11 @@ public class ConvertToCNF {
         while (groupedInput.matches(".+v" + left + ".+\\^.+" + right + ".*") ||
                 groupedInput.matches(".*" + left + ".+\\^.+" + right + "v.+")) {
             groupedInput = distributeOr(groupedInput);
-        }  
+        }
         return groupedInput;
-    }   
-    
-        /* Converts expressions of the form A<->B to (A->B)^(B->A), and expressions of 
+    }
+
+        /* Converts expressions of the form A<->B to (A->B)^(B->A), and expressions of
     the form A->B to !AvB */
     public static String convertImplicationOrIFF(String groupedInput, String operator) {
         ArrayList<String> otherOperators = findOperators(groupedInput);
@@ -75,7 +77,7 @@ public class ConvertToCNF {
         String group1;
         String group2;
         String equivalence;
-        if (operator.equals("<->")) 
+        if (operator.equals("<->"))
             equivalence  = "({1}->{2})^({2}->{1})";
         else
             equivalence = "!{1}v{2}";
@@ -93,15 +95,15 @@ public class ConvertToCNF {
                 if (groupEndIndex == groupedInput.length()-1)
                     groupEndIndex++;
                 group2 = groupedInput.substring(opEndIndex,groupEndIndex);
-                String subExpression = groupedInput.substring(groupStartIndex,groupEndIndex);   
+                String subExpression = groupedInput.substring(groupStartIndex,groupEndIndex);
                 String newSubExpression = equivalence.replace("{1}", group1);
                 newSubExpression = newSubExpression.replace("{2}", group2);
                 groupedInput = groupedInput.replace(subExpression,newSubExpression);
             }
         }
-        return groupedInput;   
+        return groupedInput;
     }
-    
+
     /* Converts expressions of the form !(A^B) to !Av!B, or !(AvB) to !A^!B */
     public static String distributeNot(String groupedInput, String operator) {
         String group;
@@ -116,29 +118,29 @@ public class ConvertToCNF {
                 if (subMatcher.find()) {
                     String newGroup;
                     String equivalence;
-                    if (operator.equals("\\^")) 
+                    if (operator.equals("\\^"))
                         equivalence  = "!{1}v!{2}";
                     else
-                        equivalence = "!{1}^!{2}";   
+                        equivalence = "!{1}^!{2}";
                     newGroup = equivalence.replace("{1}", subMatcher.group(1));
                     newGroup = newGroup.replace("{2}", subMatcher.group(2));
-                    groupedInput = groupedInput.replace(group,newGroup);         
-                }                
+                    groupedInput = groupedInput.replace(group,newGroup);
+                }
             }
         }
         groupedInput = regroupFormula(groupedInput);
         return groupedInput;
     }
-    
+
     public static String regroupFormula(String groupedInput) {
         ArrayList<String>inputOperators = findOperators(groupedInput);
         if (inputOperators.contains("!"))
             inputOperators.remove("!");
-        if (!(inputOperators.size() == 1 && inputOperators.contains("v"))) 
+        if (!(inputOperators.size() == 1 && inputOperators.contains("v")))
             groupedInput = groupByOperator(groupedInput,inputOperators);
         return groupedInput;
     }
-    
+
     /* Converts terms of the form !!A into A */
     public static String removeDoubleNegation(String groupedInput) {
         String group;
@@ -150,16 +152,16 @@ public class ConvertToCNF {
                 System.out.println("group: " + group);
                 Pattern subPattern = Pattern.compile("!!([^" + nonLiteral + "]+)");
                 Matcher subMatcher = subPattern.matcher(group);
-                if (subMatcher.find()) {                   
+                if (subMatcher.find()) {
                     String equivalence = "{1}";
                     String newGroup = equivalence.replace("{1}", subMatcher.group(1));
-                    groupedInput = groupedInput.replace(group,newGroup);   
-                } 
+                    groupedInput = groupedInput.replace(group,newGroup);
+                }
             }
         }
-        return groupedInput;     
+        return groupedInput;
     }
-    
+
     /* Converts expressions of the form Av(B^C) or (B^C)vA to: (AvB)^(AvC) */
     public static String distributeOr(String groupedInput) {
         String generalRegex;
@@ -191,13 +193,13 @@ public class ConvertToCNF {
                     String newGroup = equivalence.replace("{1}", subMatcher.group(1));
                     newGroup = newGroup.replace("{2}", subMatcher.group(2));
                     newGroup = newGroup.replace("{3}", subMatcher.group(3));
-                    groupedInput = groupedInput.replace(group,newGroup);                
-                }                
+                    groupedInput = groupedInput.replace(group,newGroup);
+                }
             }
         }
         return groupedInput;
-    }  
-    
+    }
+
     /* Returns list of all operators used in a particular expression. */
     public static ArrayList<String> findOperators(String input) {
         ArrayList<String> inputOperators = new ArrayList<>();
@@ -207,11 +209,11 @@ public class ConvertToCNF {
         // now check all binary operators
         for (String operator : operators) {
             if (input.matches(".*[^" + opCharacter + "]+" + operator + "[^" + opCharacter + "]+.*"))
-                inputOperators.add(operator);         
+                inputOperators.add(operator);
         }
         return inputOperators;
     }
-    
+
         /* Given an input string and starting index j, scans backward in the string.
     Returns an appropriate position for a left parenthesis to be placed. */
     public static int scanBackwards(int j,String input,ArrayList<String> otherOperators) {
@@ -228,7 +230,7 @@ public class ConvertToCNF {
                 if (leftCount == rightCount)
                     break;
             }
-            // if character is part of another operator 
+            // if character is part of another operator
             for (String operator : otherOperators) {
                 literalChar = Pattern.quote(Character.toString(character));
                 if (operator.matches(".*" + literalChar + ".*"))  {
@@ -240,9 +242,9 @@ public class ConvertToCNF {
                 break;
             character = input.charAt(--j); // decrement then get char
         }
-        return j;     
+        return j;
     }
-    
+
     /* Given an input string and starting index j, scans backward in the string.
     Modified to return the starting position of a bracketed group. */
     public static int modifiedScanBackwards(int j,String input,ArrayList<String> otherOperators) {
@@ -251,13 +253,13 @@ public class ConvertToCNF {
         String literalChar;
         char character = input.charAt(--j);
         while (j > 0) {
-            if (character == ')') 
+            if (character == ')')
                 rightParenthesis = true;
             if (character == '(') {
                 if (rightParenthesis)
                     break;
             }
-            // if character is part of another operator 
+            // if character is part of another operator
             for (String operator : otherOperators) {
                 literalChar = Pattern.quote(Character.toString(character));
                 if (operator.matches(".*" + literalChar + ".*"))  {
@@ -269,10 +271,10 @@ public class ConvertToCNF {
                 break;
             character = input.charAt(--j); // decrement then get char
         }
-        return j;     
+        return j;
     }
-    
-    
+
+
     /* Given an input string and starting index k, scans forward in the string.
     Returns an appropriate position for a right parenthesis to be placed. */
     public static int scanForwards(int k, String input, ArrayList<String> otherOps) {
@@ -282,7 +284,7 @@ public class ConvertToCNF {
         String literalChar;
         char character;
         while (k < input.length()) {
-            character = input.charAt(k); 
+            character = input.charAt(k);
             if (character == '(')
                 leftCount++;
             if (character == ')') {
@@ -300,13 +302,13 @@ public class ConvertToCNF {
             if (foundOp && leftCount == 0)
                 break;
             k++;
-               
+
         }
         return k;
     }
-    
+
    /* Groups expression according to precedence, wrapping parentheses around a group. */
-    public static String groupByOperator(String input, ArrayList<String> inputOperators) {     
+    public static String groupByOperator(String input, ArrayList<String> inputOperators) {
         ArrayList<String> otherOperators;
         inputOperators.remove("!");
         for (String operator : inputOperators) {
@@ -321,7 +323,7 @@ public class ConvertToCNF {
             int j,k;
             while (matcher.find()) {
                 j = matcher.start() + bracketCount;
-                k = matcher.end() + bracketCount;              
+                k = matcher.end() + bracketCount;
                 j = scanBackwards(j,input,otherOperators);
                 k = scanForwards(k,input,otherOperators);
                 // if brackets would group the entire expression, or there are already brackets there
@@ -333,23 +335,23 @@ public class ConvertToCNF {
                     input = "(" + input;
                     input = input.substring(0,k+1) + ")" + input.substring(k+1);
                 }
-                else if (input.charAt(j-1) == '!') 
+                else if (input.charAt(j-1) == '!')
                     continue;
                 else if (k == input.length()) {
                     input = input.substring(0,j+1) + "(" + input.substring(j+1);
-                    input = input + ")";                   
+                    input = input + ")";
                 }
                 else {
                     input = input.substring(0,j+1) + "(" + input.substring(j+1);
-                    input = input.substring(0,k+1) + ")" + input.substring(k+1);         
+                    input = input.substring(0,k+1) + ")" + input.substring(k+1);
                 }
                 bracketCount = bracketCount + 2;
                 System.out.println("Grouped input: " + input);
-             }  
-         } 
+             }
+         }
         return input;
     }
-    
+
     /* Given an input formula, returns true if expression is already grouped */
     public static boolean findParentheses(String formula) {
         boolean foundParenthesis = false;
@@ -359,12 +361,12 @@ public class ConvertToCNF {
         }
         return foundParenthesis;
     }
-    
+
     /* Takes a formula and groups it by operator, converts it to CNF, and writes it in clause form. */
     public static String processInput(String formula) {
         populateOperatorList();
         formula = formula.replaceAll("\\s+",""); // get rid of any whitespace
-        ArrayList<String> inputOperators = findOperators(formula); 
+        ArrayList<String> inputOperators = findOperators(formula);
         boolean parenthesesPresent = findParentheses(formula);
         // if there are parentheses present, skip grouping
         if (parenthesesPresent) {
@@ -385,17 +387,16 @@ public class ConvertToCNF {
         if (inputOperators.size() == 1 && inputOperators.contains("v") && formula.charAt(0) != '(')
             formula = "(" + formula + ")";
         String clauseForm = writeInClauseForm(formula);
-        System.out.println("Clause form: " + clauseForm);  
+        System.out.println("Clause form: " + clauseForm);
         return clauseForm;
     }
-    
+
     /* Populates array lists and preps input for parsing. */
     public static void main(String[] args) {
-        
+
         ArrayList<String> input = null;
         String formula = "!!A^!!B";
         formula = processInput(formula);
-     
+
         }
     }
-    

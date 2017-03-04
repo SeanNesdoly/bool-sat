@@ -31,9 +31,8 @@ public class Main {
         } else if (args[0].equals("1")) {
             System.out.println("Running Convert to CNF (#1)\n============================");
 
-            ArrayList<String> formula = null;
             try {
-                formula = TextFile.readFile();
+                ArrayList<String> formula = TextFile.readFile();
                 String cnf = ConvertToCNF.processInput(formula.get(0));
                 TextFile.writeFile(cnf);
             } catch (IOException ex) {
@@ -94,8 +93,32 @@ public class Main {
             }
 
         } else if (args[0].equals("3")) {
-            // TODO: add call to ThreeColour
             System.out.println("Running Three-colouring Problem (#3)\n=====================================");
+
+            try {
+                ArrayList<String> formula = TextFile.readFile();
+
+                ThreeColour c = new ThreeColour();
+                boolean canColour = c.colour(formula.get(0));
+
+                if (canColour) {
+                    String colours = "{";
+                    for (Literal l : DPLL.assignments) {
+                        if (l.val) {
+                            colours += l.s + ",";
+                        }
+                    }
+
+                    colours = colours.substring(0,colours.length() - 1) + "}";
+                    TextFile.writeFile(colours);
+                } else {
+                    TextFile.writeFile("The graph cannot be three-colored.");
+                }
+            } catch (IOException ex) {
+                System.err.println(ex.getMessage());
+                return;
+            }
+
         } else {
             System.out.println("Invalid argument. Enter the desired problem number you would like to run:\n\t1=ConvertToCNF\n\t2=ProofByRefutation\n\t3=ThreeColouringProblem");
         }
