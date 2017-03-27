@@ -2,8 +2,7 @@
 
 >Assignment 2 Technical Document  
 >CISC 352: Artificial Intelligence  
->Sean Nesdoly 13sn50 10135490  
->Mary Hoekstra 13meh9 10129863  
+>Sean Nesdoly & Mary Hoekstra
 >February 13th, 2017  
 
 ## 1. Conversion to CNF
@@ -84,16 +83,69 @@ public static String removeDoubleNegation(String groupedInput) {
 Once converted into CNF, the new formula may contain totally different operators than the original. Once again, the operator list is checked to see if “v” is the only operator, in which case parentheses are wrapped around the whole expression. The expression is then passed to *writeInClauseForm*, where all occurrences of “^” or “v” are replaced by commas, and the expression is wrapped in braces.
 
 
-
 ## 2. Proof by Refutation
 
-#### DPLL Algorithm Implementation
+Firstly, the set of premises and the conclusion are parsed from the input file. Each premise, assumed to be a well formed formula, is converted to **conjunctive normal form** (CNF). The conclusion is first **negated**, and then also converted to CNF. All formula's are combined together into one large CNF formula that is in clausal form. This is passed into the `CNF` class constructor as a String. The constructor for this class parses all of the **clauses** and **literals** into their associated data structures, as shown below:
+
+```java
+List<Literal> allLiterals; // the set of all literals in the formula
+List<Clause> clauses; // the set of clauses in the CNF formula
+```
+This `CNF` object is then passed into the **dpll** method:
+
+```java
+public static boolean dpll(CNF F)
+```
+The first step in the algorithm is to perform **unit propagation**. This method looks for all non-unit clauses that contains the specified literal **l**. As there exists an assignment of the literal that makes all clauses that contain **l** true, they are removed. Additionally, any instance of the negated literal **!l** in the formula is removed. The method for this is given below:
+
+```java
+public void unit_propagate(Literal l) {
+    // set all literals to true
+    for (Literal other : allLiterals) {
+        if (l.equals(other))
+            other.setLiteralTrue();
+    }
+    l.setLiteralTrue();
+    branchLiterals.add(l);
+
+    Literal negated_l = l.createNegatedLiteral();
+
+    for(Iterator<Clause> i = this.clauses.iterator(); i.hasNext();) {
+        Clause c = i.next();
+
+        // remove all non-unit clauses containing the literal l
+        if (!c.isUnitClause() && c.literals.contains(l)) {
+            System.out.println("\tremoving clause: " + c);
+            for (Literal cLit : c.literals)
+                allLiterals.remove(cLit);
+
+            i.remove();
+            continue;
+        }
+
+        // in every clause that contains the negated literal !l, delete it
+        while (c.literals.contains(negated_l)) {
+            c.literals.remove(negated_l);
+            allLiterals.remove(negated_l);
+            System.out.println("\tremoving literal: " + negated_l);
+        }
+    }
+}
+```
+
+After unit propagation is completed for the current assignment of literals, the formula is checked for an empty clause. If it contains one, **dpll** returns false.
+
+Then, the formula is checked to see if all clauses evaluate to true. If it does, then **dpll** returns true.
+
+Next, a **branching literal** is chosen. For the unassigned literal, **dpll** is recursively called on both *true* and *false* assignments.
+
+The recursive descent then finishes!
 
 ## 3. Three-Colouring Problem
 
 In order to solve the three-colouring problem,the input string is first parsed to generate a set of vertices and a list of edges. This is done using the CNF object.
 
-Next, the set of vertices is used to create a set of clauses. For each vertex, 4 clauses are added to the list which indicate that a vertex can only have one colour. 
+Next, the set of vertices is used to create a set of clauses. For each vertex, 4 clauses are added to the list which indicate that a vertex can only have one colour.
 
 ```java
 /* For each vertex, creates 4 clauses imposing colouring constraints. */
